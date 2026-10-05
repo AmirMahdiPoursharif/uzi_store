@@ -1,1 +1,7 @@
 __pycache__/
+
+opencode.json
+/database
+.env
+.env.*
+!.env.example
