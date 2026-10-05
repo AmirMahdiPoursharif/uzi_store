@@ -1,7 +1,10 @@
 __pycache__/
 
 opencode.json
-/database
 .env
 .env.*
 !.env.example
+
+*.sqlite3
+*.db
+database/
