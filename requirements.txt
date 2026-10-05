@@ -1,10 +1,33 @@
-asgiref==3.11.1
+#--index-url https://mirror2.chabokan.net/pypi/simple/
+
+# Direct dependencies only; pip resolves the transitive tree.
+# Run `pip freeze > requirements.lock.txt` if you need fully pinned deploys.
+
+# core
 Django==5.2
-django-environ==0.13.0
-django-filter==25.2
-django-redis==6.0.0
+
+# PostgreSQL and container web server
+psycopg[binary]==3.3.4
+gunicorn==23.0.0
+whitenoise==6.12.0
+
+# API
 djangorestframework==3.17.0
+djangorestframework_simplejwt==5.5.1
+django-cors-headers==4.9.0
+
+# config
+django-environ==0.13.0
+
+# models / media
+django-phonenumber-field==8.4.0
+phonenumbers==9.0.33
 pillow==12.2.0
+
+# cache + broker
+django-redis==6.0.0
 redis==7.4.0
-sqlparse==0.5.5
-tzdata==2026.2
+
+# background tasks
+celery==5.6.3
+django-celery-beat==2.9.0
