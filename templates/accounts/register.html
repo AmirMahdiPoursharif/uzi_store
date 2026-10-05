@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>ثبت‌نام</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tahoma', 'Vazir', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            max-width: 450px;
+            width: 100%;
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #555; font-weight: bold; }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: transform 0.2s ease;
+        }
+        button:hover { transform: translateY(-2px); }
+        .message { margin-top: 15px; padding: 12px; border-radius: 10px; display: none; font-size: 14px; }
+        .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .links { text-align: center; margin-top: 20px; font-size: 14px; }
+        .links a { color: #667eea; text-decoration: none; }
+        .links a:hover { text-decoration: underline; }
+        small { display: block; color: #999; font-size: 12px; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 ثبت‌نام</h1>
+        <div class="subtitle">ایجاد حساب کاربری جدید</div>
+
+        <div class="form-group">
+            <label>📧 ایمیل</label>
+            <input type="email" id="email" placeholder="example@gmail.com">
+        </div>
+
+        <div class="form-group">
+            <label>📱 شماره موبایل</label>
+            <input type="tel" id="phone" placeholder="09123456789" required>
+            <small>مثال: 09123456789</small>
+        </div>
+
+        <div class="form-group">
+            <label>👤 نام</label>
+            <input type="text" id="first_name" placeholder="نام خود را وارد کنید">
+        </div>
+
+        <div class="form-group">
+            <label>👨‍👩‍👧 نام خانوادگی</label>
+            <input type="text" id="last_name" placeholder="نام خانوادگی خود را وارد کنید">
+        </div>
+
+        <div class="form-group">
+            <label>🔒 رمز عبور</label>
+            <input type="password" id="password" placeholder="رمز عبور قوی وارد کنید">
+        </div>
+
+        <div class="form-group">
+            <label>🔒 تکرار رمز عبور</label>
+            <input type="password" id="password2" placeholder="رمز عبور را دوباره وارد کنید">
+        </div>
+
+        <button onclick="register()">✅ ثبت‌نام</button>
+
+        <div id="message" class="message"></div>
+
+        <div class="links">
+            قبلاً ثبت‌نام کرده‌اید؟ <a href="/api/auth/login-page/">ورود</a>
+        </div>
+    </div>
+
+    <script>
+        async function register() {
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const first_name = document.getElementById('first_name').value;
+            const last_name = document.getElementById('last_name').value;
+            const password = document.getElementById('password').value;
+            const password2 = document.getElementById('password2').value;
+            const msgDiv = document.getElementById('message');
+            
+            // اعتبارسنجی ساده
+            if (!email) {
+                showMessage(msgDiv, '❌ لطفاً ایمیل خود را وارد کنید', 'error');
+                return;
+            }
+            
+            if (!phone) {
+                showMessage(msgDiv, '❌ لطفاً شماره موبایل خود را وارد کنید', 'error');
+                return;
+            }
+            
+            if (phone.length !== 11) {
+                showMessage(msgDiv, '❌ شماره موبایل باید ۱۱ رقم باشد (مثال: 09123456789)', 'error');
+                return;
+            }
+            
+            if (!first_name) {
+                showMessage(msgDiv, '❌ لطفاً نام خود را وارد کنید', 'error');
+                return;
+            }
+            
+            if (!last_name) {
+                showMessage(msgDiv, '❌ لطفاً نام خانوادگی خود را وارد کنید', 'error');
+                return;
+            }
+            
+            if (!password || !password2) {
+                showMessage(msgDiv, '❌ لطفاً رمز عبور و تکرار آن را وارد کنید', 'error');
+                return;
+            }
+            
+            if (password !== password2) {
+                showMessage(msgDiv, '❌ رمز عبور و تکرار آن مطابقت ندارند', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/register/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, phone, first_name, last_name, password, password2 })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('register_phone', phone);
+                    showMessage(msgDiv, '✅ ' + data.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/api/auth/verify-page/';
+                    }, 1500);
+                } else {
+                    const errorMsg = data.message || data.phone || data.email || 'خطا در ثبت‌نام';
+                    showMessage(msgDiv, '❌ ' + errorMsg, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage(msgDiv, '❌ خطا در ارتباط با سرور', 'error');
+            }
+        }
+        
+        function showMessage(element, msg, type) {
+            element.textContent = msg;
+            element.className = `message ${type}`;
+            element.style.display = 'block';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

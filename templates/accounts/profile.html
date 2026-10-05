@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>پروفایل کاربری</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tahoma', 'Vazir', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-right: 4px solid #667eea;
+            padding-right: 15px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+        }
+        .btn-secondary {
+            background: #718096;
+        }
+        .btn-outline {
+            background: transparent;
+            color: #667eea;
+            border: 1px solid #667eea;
+            width: auto;
+        }
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+        .message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .label { font-weight: bold; color: #555; }
+        .value { color: #333; }
+        .edit-btn {
+            background: transparent;
+            color: #667eea;
+            border: 1px solid #667eea;
+            padding: 5px 15px;
+            margin-top: 10px;
+            width: auto;
+        }
+        .edit-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #667eea;
+            font-size: 16px;
+        }
+        .error-box {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .close {
+            cursor: pointer;
+            font-size: 28px;
+            color: #999;
+            line-height: 1;
+        }
+        .close:hover {
+            color: #333;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .checkbox-group input {
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- اطلاعات پروفایل -->
+        <div class="card">
+            <h2>👤 اطلاعات پروفایل</h2>
+            <div id="loading" class="loading">⏳ در حال بارگذاری...</div>
+            <div id="profile-content" style="display: none;">
+                <div class="info-row">
+                    <span class="label">📧 ایمیل:</span>
+                    <span class="value" id="display-email">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">👤 نام:</span>
+                    <span class="value" id="display-firstname">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">👨‍👩‍👧 نام خانوادگی:</span>
+                    <span class="value" id="display-lastname">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">📞 تلفن:</span>
+                    <span class="value" id="display-phone">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">🏠 آدرس:</span>
+                    <span class="value" id="display-address">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">📮 کد پستی:</span>
+                    <span class="value" id="display-postalcode">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">🌆 شهر:</span>
+                    <span class="value" id="display-city">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">🗺️ استان:</span>
+                    <span class="value" id="display-province">-</span>
+                </div>
+                <button onclick="openEditModal()" class="edit-btn">✏️ ویرایش اطلاعات</button>
+            </div>
+        </div>
+
+        <!-- تغییر رمز عبور -->
+        <div class="card">
+            <h2>🔒 تغییر رمز عبور</h2>
+            <div class="form-group">
+                <label>رمز فعلی</label>
+                <input type="password" id="old-password" placeholder="رمز فعلی را وارد کنید">
+            </div>
+            <div class="form-group">
+                <label>رمز جدید</label>
+                <input type="password" id="new-password" placeholder="رمز جدید (حداقل ۸ کاراکتر)">
+            </div>
+            <div class="form-group">
+                <label>تکرار رمز جدید</label>
+                <input type="password" id="confirm-password" placeholder="تکرار رمز جدید">
+            </div>
+            <button onclick="changePassword()">🔄 تغییر رمز عبور</button>
+            <div id="password-message" class="message"></div>
+        </div>
+
+        <!-- حذف حساب -->
+        <div class="card">
+            <h2>⚠️ حذف حساب کاربری</h2>
+            <p style="color: #e53e3e; margin-bottom: 15px;">⚠️ توجه: این عمل غیرقابل بازگشت است!</p>
+            <div class="form-group">
+                <label>رمز عبور برای تأیید</label>
+                <input type="password" id="delete-password" placeholder="رمز عبور خود را وارد کنید">
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="delete-confirm">
+                <label style="font-weight: normal; cursor: pointer;">من از عواقب حذف حساب کاربری خود آگاه هستم</label>
+            </div>
+            <button onclick="deleteAccount()" class="btn-danger">🗑️ حذف حساب کاربری</button>
+            <div id="delete-message" class="message"></div>
+        </div>
+
+        <div style="text-align: center;">
+            <button onclick="logout()" class="btn-secondary">🚪 خروج از حساب</button>
+        </div>
+    </div>
+
+    <!-- مودال ویرایش اطلاعات -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ ویرایش اطلاعات</h3>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>📧 ایمیل</label>
+                <input type="email" id="edit-email">
+            </div>
+            <div class="form-group">
+                <label>👤 نام</label>
+                <input type="text" id="edit-firstname">
+            </div>
+            <div class="form-group">
+                <label>👨‍👩‍👧 نام خانوادگی</label>
+                <input type="text" id="edit-lastname">
+            </div>
+            <div class="form-group">
+                <label>📞 تلفن</label>
+                <input type="tel" id="edit-phone">
+            </div>
+            <div class="form-group">
+                <label>🏠 آدرس</label>
+                <textarea id="edit-address" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>📮 کد پستی</label>
+                <input type="text" id="edit-postalcode">
+            </div>
+            <div class="form-group">
+                <label>🌆 شهر</label>
+                <input type="text" id="edit-city">
+            </div>
+            <div class="form-group">
+                <label>🗺️ استان</label>
+                <input type="text" id="edit-province">
+            </div>
+            <button onclick="updateProfile()">💾 ذخیره تغییرات</button>
+            <div id="edit-message" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = {};
+
+        // ========== بارگذاری پروفایل ==========
+        async function loadProfile() {
+            const loadingDiv = document.getElementById('loading');
+            const profileContent = document.getElementById('profile-content');
+            
+            try {
+                console.log('📡 در حال دریافت اطلاعات پروفایل...');
+                
+                const response = await fetch('/api/auth/profile/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                console.log('📊 وضعیت پاسخ:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ اطلاعات دریافت شد:', data);
+                    
+                    currentUser = data;
+                    
+                    document.getElementById('display-email').innerText = data.email || '-';
+                    document.getElementById('display-firstname').innerText = data.first_name || '-';
+                    document.getElementById('display-lastname').innerText = data.last_name || '-';
+                    document.getElementById('display-phone').innerText = data.phone || '-';
+                    document.getElementById('display-address').innerText = data.address || '-';
+                    document.getElementById('display-postalcode').innerText = data.postal_code || '-';
+                    document.getElementById('display-city').innerText = data.city || '-';
+                    document.getElementById('display-province').innerText = data.province || '-';
+                    
+                    loadingDiv.style.display = 'none';
+                    profileContent.style.display = 'block';
+                } else if (response.status === 401) {
+                    console.log('🔒 احراز هویت نشده - رفتن به صفحه ورود');
+                    window.location.href = '/api/auth/login-page/';
+                } else {
+                    const text = await response.text();
+                    console.error('❌ خطای سرور:', response.status, text.substring(0, 200));
+                    loadingDiv.innerHTML = `<div class="error-box">❌ خطا: ${response.status}</div>`;
+                }
+            } catch (error) {
+                console.error('❌ خطای ارتباطی:', error);
+                loadingDiv.innerHTML = `<div class="error-box">❌ خطا: ${error.message}</div>`;
+            }
+        }
+
+        // ========== تغییر رمز عبور ==========
+        async function changePassword() {
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const messageDiv = document.getElementById('password-message');
+            
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                showMessage(messageDiv, '❌ لطفاً همه فیلدها را پر کنید', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/change-password/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        old_password: oldPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage(messageDiv, '✅ ' + data.message, 'success');
+                    document.getElementById('old-password').value = '';
+                    document.getElementById('new-password').value = '';
+                    document.getElementById('confirm-password').value = '';
+                } else {
+                    const errorMsg = data.confirm_password || data.old_password || data.new_password || data.error || 'خطا';
+                    showMessage(messageDiv, '❌ ' + errorMsg, 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, '❌ خطا در ارتباط با سرور', 'error');
+            }
+        }
+
+        // ========== مودال ویرایش ==========
+        function openEditModal() {
+            document.getElementById('edit-email').value = currentUser.email || '';
+            document.getElementById('edit-firstname').value = currentUser.first_name || '';
+            document.getElementById('edit-lastname').value = currentUser.last_name || '';
+            document.getElementById('edit-phone').value = currentUser.phone || '';
+            document.getElementById('edit-address').value = currentUser.address || '';
+            document.getElementById('edit-postalcode').value = currentUser.postal_code || '';
+            document.getElementById('edit-city').value = currentUser.city || '';
+            document.getElementById('edit-province').value = currentUser.province || '';
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+async function updateProfile() {
+    const data = {
+        first_name: document.getElementById('edit-firstname').value,
+        last_name: document.getElementById('edit-lastname').value,
+        phone: document.getElementById('edit-phone').value,
+        address: document.getElementById('edit-address').value,
+        postal_code: document.getElementById('edit-postalcode').value,
+        city: document.getElementById('edit-city').value,
+        province: document.getElementById('edit-province').value
+    };
+    
+    const messageDiv = document.getElementById('edit-message');
+    
+    try {
+        console.log('📤 ارسال داده:', data);
+        
+        const response = await fetch('/api/auth/update-profile/', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        console.log('📥 پاسخ:', result);
+        
+        if (response.ok) {
+            showMessage(messageDiv, '✅ ' + result.message, 'success');
+            setTimeout(() => {
+                closeEditModal();
+                loadProfile();  // بارگذاری مجدد اطلاعات
+            }, 1500);
+        } else {
+            let errorMsg = 'خطا در ویرایش';
+            if (result.first_name) errorMsg = result.first_name[0];
+            else if (result.last_name) errorMsg = result.last_name[0];
+            else if (result.phone) errorMsg = result.phone[0];
+            else if (result.address) errorMsg = result.address[0];
+            else if (result.postal_code) errorMsg = result.postal_code[0];
+            else if (result.city) errorMsg = result.city[0];
+            else if (result.province) errorMsg = result.province[0];
+            else if (result.email) errorMsg = result.email[0];
+            else if (result.message) errorMsg = result.message;
+            
+            showMessage(messageDiv, '❌ ' + errorMsg, 'error');
+        }
+    } catch (error) {
+        console.error('❌ خطا:', error);
+        showMessage(messageDiv, '❌ خطا در ارتباط با سرور: ' + error.message, 'error');
+    }
+}
+
+        // ========== حذف حساب ==========
+        async function deleteAccount() {
+            const password = document.getElementById('delete-password').value;
+            const confirm = document.getElementById('delete-confirm').checked;
+            const msgDiv = document.getElementById('delete-message');
+            
+            if (!password) {
+                showMessage(msgDiv, '❌ لطفاً رمز عبور خود را وارد کنید', 'error');
+                return;
+            }
+            if (!confirm) {
+                showMessage(msgDiv, '❌ لطفاً حذف حساب را تأیید کنید', 'error');
+                return;
+            }
+            if (!confirm('⚠️ آیا از حذف کامل حساب خود مطمئن هستید؟')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/delete-account/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ password: password, confirm: true })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(msgDiv, '✅ ' + result.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/api/auth/register-page/';
+                    }, 2000);
+                } else {
+                    const errorMsg = result.password || result.confirm || result.message || 'خطا';
+                    showMessage(msgDiv, '❌ ' + errorMsg, 'error');
+                }
+            } catch (error) {
+                showMessage(msgDiv, '❌ خطا در ارتباط با سرور', 'error');
+            }
+        }
+
+        // ========== خروج ==========
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout/', { method: 'POST', credentials: 'include' });
+                window.location.href = '/api/auth/login-page/';
+            } catch (error) {
+                window.location.href = '/api/auth/login-page/';
+            }
+        }
+
+        // ========== نمایش پیام ==========
+        function showMessage(element, msg, type) {
+            element.textContent = msg;
+            element.className = `message ${type}`;
+            element.style.display = 'block';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        // ========== بارگذاری اولیه ==========
+        loadProfile();
+    </script>
+</body>
+</html>

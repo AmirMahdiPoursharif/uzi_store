@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>ورود</title>
+    <style>
+        body { font-family: Tahoma; background: #667eea; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 20px; width: 350px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
+        button { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .message { margin-top: 10px; padding: 10px; border-radius: 8px; display: none; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔐 ورود</h2>
+        <input type="email" id="email" placeholder="ایمیل">
+        <input type="password" id="password" placeholder="رمز عبور">
+        <button onclick="login()">ورود</button>
+        <div id="message" class="message"></div>
+        <p style="text-align: center; margin-top: 15px;">
+            <a href="/api/auth/register-page/">ثبت‌نام</a>
+        </p>
+    </div>
+    <script>
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const msgDiv = document.getElementById('message');
+            
+            try {
+                const res = await fetch('/api/auth/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    msgDiv.className = 'message success';
+                    msgDiv.innerText = '✅ ورود موفق';
+                    msgDiv.style.display = 'block';
+                    localStorage.setItem('user_email', email);
+                    setTimeout(() => { 
+                        window.location.href = '/api/auth/profile-page/'; 
+                    }, 1000);
+                } else {
+                    msgDiv.className = 'message error';
+                    msgDiv.innerText = '❌ ' + (result.message || 'ایمیل یا رمز اشتباه');
+                    msgDiv.style.display = 'block';
+                    
+                    if (result.next_action === 'verify') {
+                        localStorage.setItem('verify_email', email);
+                        setTimeout(() => { 
+                            window.location.href = '/api/auth/verify-page/'; 
+                        }, 2000);
+                    }
+                }
+            } catch(e) {
+                msgDiv.className = 'message error';
+                msgDiv.innerText = '❌ خطا در ارتباط با سرور';
+                msgDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

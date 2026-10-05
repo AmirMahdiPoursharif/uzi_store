@@ -1,0 +1,48 @@
+# ---> Python
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+
+.idea/
+
+
+.pytest_cache/
+
+# Environments
+.env
+.venv
+env/
+venv.bak/
+
+# PyPI configuration file
+.pypirc
+
+# ai
+opencode.json
+
+# Runtime files and database exports
+staticfiles/
+database/*.json
+backups/
+*.sqlite3
+*.sqlite3-*

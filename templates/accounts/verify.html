@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>تأیید ایمیل</title>
+    <style>
+        body { font-family: Tahoma; background: #667eea; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 20px; width: 350px; text-align: center; }
+        input { width: 100%; padding: 15px; font-size: 20px; text-align: center; letter-spacing: 5px; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px; }
+        button { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 5px 0; }
+        .btn-secondary { background: #718096; }
+        .message { margin-top: 10px; padding: 10px; border-radius: 8px; display: none; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔐 تأیید ایمیل</h2>
+        <p>کد ۶ رقمی ارسال شده را وارد کنید</p>
+        <input type="text" id="code" maxlength="6" placeholder="_ _ _ _ _ _">
+        <button onclick="verify()">تأیید</button>
+        <button onclick="resendCode()" class="btn-secondary">ارسال مجدد کد</button>
+        <div id="message" class="message"></div>
+    </div>
+    <script>
+        // گرفتن ایمیل از localStorage
+        let userEmail = localStorage.getItem('verify_email');
+        
+        if (!userEmail) {
+            userEmail = prompt('ایمیل خود را وارد کنید:');
+            if (userEmail) {
+                localStorage.setItem('verify_email', userEmail);
+            }
+        }
+        
+        console.log('Email for verification:', userEmail);
+        
+        async function verify() {
+            const code = document.getElementById('code').value;
+            const msgDiv = document.getElementById('message');
+            
+            if (!code || code.length !== 6) {
+                showMessage('❌ کد ۶ رقمی را وارد کنید', 'error');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/auth/verify/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail, code: code })
+                });
+                
+                const result = await res.json();
+                console.log('Verify response:', result);
+                
+                if (res.ok) {
+                    showMessage('✅ ' + (result.message || 'حساب فعال شد'), 'success');
+                    setTimeout(() => { 
+                        window.location.href = '/api/auth/login-page/'; 
+                    }, 1500);
+                } else {
+                    showMessage('❌ ' + (result.message || 'کد نامعتبر'), 'error');
+                }
+            } catch(e) {
+                console.error('Error:', e);
+                showMessage('❌ خطا در ارتباط با سرور', 'error');
+            }
+        }
+        
+        async function resendCode() {
+            const msgDiv = document.getElementById('message');
+            
+            if (!userEmail) {
+                showMessage('❌ ایمیل یافت نشد', 'error');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/auth/resend-otp/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail })
+                });
+                
+                const result = await res.json();
+                console.log('Resend response:', result);
+                
+                if (res.ok) {
+                    showMessage('✅ ' + (result.message || 'کد جدید ارسال شد'), 'success');
+                } else {
+                    showMessage('❌ ' + (result.message || 'خطا در ارسال مجدد'), 'error');
+                }
+            } catch(e) {
+                console.error('Error:', e);
+                showMessage('❌ خطا در ارتباط با سرور', 'error');
+            }
+        }
+        
+        function showMessage(msg, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.className = `message ${type}`;
+            msgDiv.innerText = msg;
+            msgDiv.style.display = 'block';
+            setTimeout(() => {
+                msgDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Enter key support
+        document.getElementById('code').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verify();
+            }
+        });
+    </script>
+</body>
+</html>

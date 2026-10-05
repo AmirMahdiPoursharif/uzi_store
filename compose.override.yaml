@@ -1,0 +1,25 @@
+# Automatically loaded by `docker compose` for local development.
+x-dev-app: &dev-app
+  build:
+    context: .
+    dockerfile: Dockerfile.dev
+  image: uzi-store:dev
+  environment:
+    DEBUG: "True"
+  volumes:
+    - ./src:/app/src
+    - ./templates:/app/templates
+
+services:
+  web:
+    <<: *dev-app
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+  migrate:
+    <<: *dev-app
+
+  worker:
+    <<: *dev-app
+
+  beat:
+    <<: *dev-app
