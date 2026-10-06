@@ -2,7 +2,7 @@
 
 from .settings import *  # noqa: F403
 
-SQLITE_PATH = Path(env('SQLITE_PATH', default=str(PROJECT_DIR / 'database' / 'db.sqlite3'))).resolve()
+SQLITE_PATH = Path(env('SQLITE_PATH', default=str(BASE_DIR / 'database' / 'db.sqlite3'))).resolve()
 if not SQLITE_PATH.is_file():
     raise FileNotFoundError(f'SQLite export source does not exist: {SQLITE_PATH}')
 

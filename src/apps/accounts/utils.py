@@ -1,5 +1,5 @@
 import logging
-import random
+import secrets
 from common.http import HttpError, post_json
 from django.conf import settings
 from django.core.cache import cache
@@ -36,18 +36,15 @@ def send_sms(phone, message):
         loger.error(f"SMS exception: {str(e)}")
         return False
 def otp_generate(phone):
-    otp = random.randint(100000, 999999)
+    otp = 100000 + secrets.randbelow(900000)
     cache_key = f'otp_{phone}'
     cache.set(cache_key, otp, timeout=300)
     message = f"کد تأیید شما: {otp}"
     send_sms(phone, message)
 
-    print("\n" + "="*50)
-    print(f"📱 شماره تلفن: {phone}")
-    print(f"🔑 کد تأیید: {otp}")
-    print("="*50 + "\n")
-    
-    loger.info(f"OTP for {phone}: {otp}")
+    # Never print or log the code itself. In local development send_sms already
+    # echoes the whole message to stdout when SMS_API_KEY/SMS_API_URL are unset.
+    loger.info(f"OTP generated for {phone}")
     return otp
 def otp_verify(phone, code):
     cache_key = f'otp_{phone}'

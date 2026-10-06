@@ -8,7 +8,7 @@ Django 5.2 + DRF e-commerce backend (API-only; the HTML templates are test pages
 
 ## Commands
 
-Everything runs through Docker Compose. **`compose.override.yaml` is auto-loaded by `docker compose`**, so the bare command already gives you the dev stack (`Dockerfile.dev`, `runserver` with auto-reload, `DEBUG=True`, `./src` and `./templates` bind-mounted).
+Everything runs through Docker Compose. **`compose.override.yaml` is auto-loaded by `docker compose`**, so the bare command already gives you the dev stack (`Dockerfile.dev`, `runserver` with auto-reload, `DEBUG=True`, `./src` bind-mounted, including templates).
 
 ```sh
 docker compose up --build -d          # dev stack (override applies automatically)
@@ -45,7 +45,8 @@ There is no linter, formatter, pytest config, `conftest.py`, or CI in this repo.
 `src/config/settings.py:24` does `sys.path.insert(0, str(BASE_DIR / "apps"))`. So apps import as `from product.models import Product`, **not** `from apps.product.models import ...`, and `src/apps/__init__.py` deliberately does not exist. Path constants:
 
 - `BASE_DIR` = `src/`, `PROJECT_DIR` = repo root
-- `.env`, `media/`, `staticfiles/`, `templates/` all resolve against `PROJECT_DIR` (outside `src/`)
+- `templates/`, `media/`, and the default SQLite export path `database/db.sqlite3` resolve against `BASE_DIR` (inside `src/`)
+- `.env` and `staticfiles/` resolve against `PROJECT_DIR` (the repo root)
 
 The `src/apps/*/api/` subpackages have no `__init__.py` and work as namespace packages. Follow that pattern rather than "fixing" it piecemeal.
 
@@ -123,6 +124,6 @@ Registration is phone-OTP based: OTP is cached at `otp_<phone>` for 300s and sen
 
 ## Secrets
 
-`.env` is **tracked in git** despite being listed in `.gitignore` — the ignore rule has no effect on an already-tracked file. `SECRET_KEY`, `PAYMENT_GATEWAY_API_KEY`, and `SMS_API_KEY` are in the history. Untracking it requires `git rm --cached .env` *and* rotating those keys. Never add new secrets to it; use `.env.example` as the documented shape.
+`.env` is untracked and absent from every reachable ref (`origin/main` and `origin/dev` histories are both clean). `.env.example` is the tracked template with the same 16 keys; keep the two in sync by key name and never put a real value in the example. The local `SECRET_KEY` has been rotated, and `PAYMENT_GATEWAY_API_KEY`/`SMS_API_KEY` are empty locally — but the leaked values still live in the abandoned `git.uzicoders.ir` upstream, so they must be rotated provider-side.
 
 `PAYMENT_URLS["payment_gateway_callback_url"]` is hardcoded to `http://127.0.0.1:8000/...` in settings, so payments only complete locally until that is read from env.

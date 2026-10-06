@@ -35,6 +35,35 @@ docker compose -f compose.yaml -f compose.dev.yaml down
 Use both `-f` arguments for development commands. The two configurations share
 the same database and media; run one configuration at a time.
 
+## Tests
+
+Pytest uses `config.settings` and discovers `tests.py`, `test_*.py`, and
+`*_tests.py` under `src/apps`. Existing Django `TestCase` tests work unchanged.
+
+For Docker, rebuild the web image to install the test dependencies and copy the
+configuration, then run the suite:
+
+```sh
+docker compose up --build -d web
+docker compose exec web python -m pytest
+```
+
+For a local Python environment, install the dependencies and run from the
+repository root (with `.env` configured and PostgreSQL and Redis running):
+
+```sh
+python -m pip install -r requirements.txt
+python -m pytest
+```
+
+To check discovery without creating a test database, use
+`python -m pytest --collect-only`. To run one app, use
+`python -m pytest src/apps/product` from the repository root, or
+`docker compose exec web python -m pytest apps/product` in Docker.
+Pytest-django creates a separate test database; the PostgreSQL user must have
+permission to create databases. New pytest functions that access the database
+should use `@pytest.mark.django_db` or the `db` fixture.
+
 ## Default containers
 
 ```sh
@@ -49,8 +78,8 @@ Redis, waits for them to become healthy, then runs migrations and collects stati
 files before starting the web server, Celery worker, and database-backed Celery
 Beat scheduler. WhiteNoise serves collected static files.
 
-PostgreSQL and Redis use named volumes. Uploaded media stays in `./media`, and
-templates are loaded from `./templates`. `docker compose down` keeps data;
+PostgreSQL and Redis use named volumes. Uploaded media stays in `./src/media`, and
+templates are loaded from `./src/templates`. `docker compose down` keeps data;
 `docker compose down -v` deletes the named volumes, including PostgreSQL data.
 
 For deployment, set `DEBUG=False` and `ALLOWED_HOSTS` to your domain names, and
@@ -72,7 +101,7 @@ and data compatibility, while Python imports follow the current `src/apps/` layo
 
 ## Transfer existing SQLite data
 
-The existing `database/db.sqlite3` is kept as a backup. Switching the database
+The existing `src/database/db.sqlite3` is kept as a backup. Switching the database
 backend creates a fresh PostgreSQL database; it does not automatically import
 SQLite records. Run this once against a fresh PostgreSQL database, before creating
 a superuser or accepting traffic. Stop web/task processes while transferring data.
@@ -82,8 +111,8 @@ docker compose build web
 docker compose stop web worker beat
 docker compose up -d db redis
 docker compose run --rm --no-deps migrate
-docker compose run --rm --no-deps -v ./database:/data -e SQLITE_PATH=/data/db.sqlite3 web python manage.py dumpdata --settings=config.settings_sqlite_export --all --natural-foreign --exclude=contenttypes --exclude=auth.permission --exclude=dashboard_app --output=/data/sqlite-export.json
-docker compose run --rm --no-deps -v ./database:/data:ro web python manage.py loaddata /data/sqlite-export.json
+docker compose run --rm --no-deps -v ./src/database:/data -e SQLITE_PATH=/data/db.sqlite3 web python manage.py dumpdata --settings=config.settings_sqlite_export --all --natural-foreign --exclude=contenttypes --exclude=auth.permission --exclude=dashboard_app --output=/data/sqlite-export.json
+docker compose run --rm --no-deps -v ./src/database:/data:ro web python manage.py loaddata /data/sqlite-export.json
 docker compose up -d
 ```
 

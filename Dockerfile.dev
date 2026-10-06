@@ -10,11 +10,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN groupadd --system app && useradd --system --gid app app \
-    && mkdir -p /app/media /app/staticfiles \
+    && mkdir -p /app/src/media /app/staticfiles \
     && chown -R app:app /app
 
+COPY --chown=app:app pytest.ini /app/pytest.ini
 COPY --chown=app:app src /app/src
-COPY --chown=app:app templates /app/templates
 
 WORKDIR /app/src
 USER app

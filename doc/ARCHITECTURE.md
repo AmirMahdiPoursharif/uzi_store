@@ -76,21 +76,21 @@ uzi-store/
 │   │   ├── celery.py
 │   │   ├── wsgi.py / asgi.py
 │   │   └── __init__.py           ← celery_app را expose می‌کند
-│   └── apps/                     ← به sys.path اضافه می‌شود (settings.py:24)
-│       ├── accounts/             ← کاربر، OTP، JWT
-│       ├── dashboard/            ← پروفایل، تغییر رمز، حذف حساب
-│       ├── product/              ← محصول، دسته، تصویر، نظر، پاسخ
-│       │   └── api/              ← views/serializers/urls/permissions/pagination
-│       ├── cart/
-│       │   └── api/
-│       ├── order/
-│       │   └── api/              ← + payment_verify.py و tasks.py
-│       └── common/               ← http.py (بدون مدل، اپ جنگو نیست)
-├── templates/                    ← HTML (خارج از src)
-│   ├── accounts/{login,register,verify,profile}.html
-│   └── payment/callback.html
-├── media/                        ← آپلود تصاویر محصول
-├── database/                     ← دامپ‌های JSON (gitignore شده)
+│   ├── apps/                     ← به sys.path اضافه می‌شود (settings.py:24)
+│   │   ├── accounts/             ← کاربر، OTP، JWT
+│   │   ├── dashboard/            ← پروفایل، تغییر رمز، حذف حساب
+│   │   ├── product/              ← محصول، دسته، تصویر، نظر، پاسخ
+│   │   │   └── api/              ← views/serializers/urls/permissions/pagination
+│   │   ├── cart/
+│   │   │   └── api/
+│   │   ├── order/
+│   │   │   └── api/              ← + payment_verify.py و tasks.py
+│   │   └── common/               ← http.py (بدون مدل، اپ جنگو نیست)
+│   ├── templates/                ← HTML
+│   │   ├── accounts/{login,register,verify,profile}.html
+│   │   └── payment/callback.html
+│   ├── media/                    ← آپلود تصاویر محصول
+│   └── database/                 ← دامپ‌های JSON (gitignore شده)
 ├── doc/                          ← همین پوشه
 │   ├── ARCHITECTURE.md           ← این فایل
 │   ├── CART_APP.md
@@ -98,7 +98,7 @@ uzi-store/
 ├── Dockerfile
 ├── compose.yaml
 ├── requirements.txt
-├── .env  ⚠️ در گیت ترک شده — رازها لو رفته‌اند
+├── .env  (ignore شده — در گیت نیست ✅)
 └── .env.example
 ```
 
@@ -115,10 +115,11 @@ sys.path.insert(0, str(APPS_DIR))
 یعنی اپ‌ها **top-level** import می‌شوند: `from product.models import Product` — نه `from apps.product.models import ...`.
 به همین دلیل `src/apps/__init__.py` وجود ندارد و لازم هم نیست.
 
-مسیرهای فایل‌سیستمی نسبت به `PROJECT_DIR` حساب می‌شوند:
-- `MEDIA_ROOT = PROJECT_DIR / 'media'`
+مسیر قالب‌ها، تصاویر و دیتابیس SQLite نسبت به `BASE_DIR` و مسیر تنظیمات محیط و فایل‌های استاتیک نسبت به `PROJECT_DIR` حساب می‌شوند:
+- `MEDIA_ROOT = BASE_DIR / 'media'`
 - `STATIC_ROOT = PROJECT_DIR / 'staticfiles'`
-- `TEMPLATES[0]['DIRS'] = [PROJECT_DIR / 'templates']`
+- `TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']`
+- مسیر پیش‌فرض خروجی SQLite: `BASE_DIR / 'database' / 'db.sqlite3'`
 - `.env` از `PROJECT_DIR / '.env'` خوانده می‌شود
 
 ---
@@ -671,6 +672,8 @@ def invalidate_products_cache(...):
 
 ## ۱۱. تسک‌های پس‌زمینه (Celery)
 
+* میشه به جای سلری از scheduler استفاده کرد برای کاهش مصرف منابع چون این صرفا فقط یه کرونجاب ساده هست
+
 ```python
 # src/config/celery.py
 app = Celery("uzistore")
@@ -782,10 +785,10 @@ throttle های کلاس‌محور در `accounts/views.py`: `RegisterThrottle`
 | `Order` | — (`pass`) | بدون تنظیمات |
 | `OrderItem` | — (`pass`) | |
 | `InventoryReservation` | — (`pass`) | |
-| `User` | — (`pass`) | ⚠️ **مشکل امنیتی** |
+| `User` | `UserAdmin(BaseUserAdmin)` | fieldset های سفارشی برای مدل ایمیل‌محور ✅ |
 | `Profile` | **ثبت نشده** | |
 
-> ⚠️ `UserAdmin(admin.ModelAdmin): pass` → فیلد `password` به‌صورت متن خام قابل ویرایش است و هش نمی‌شود. باید از `django.contrib.auth.admin.UserAdmin` ارث‌بری کند.
+> ✅ **فاز ۰:** `accounts/admin.py` از `django.contrib.auth.admin.UserAdmin` ارث‌بری می‌کند. چون مدل `username` و `date_joined` ندارد، `fieldsets`, `add_fieldsets`, `list_display`, `list_filter`, `search_fields`, `ordering` از نو تعریف شده‌اند و `last_login`/`acc_created_at` در `readonly_fields` هستند (دومی `auto_now_add` است و قابل ویرایش نیست). نتیجه: فیلد `password` در فرم تغییر به `ReadOnlyPasswordHashField` تبدیل شد و رمز در فرم افزودن با `set_password()` هش می‌شود (`pbkdf2_sha256`).
 
 ---
 
@@ -793,11 +796,11 @@ throttle های کلاس‌محور در `accounts/views.py`: `RegisterThrottle`
 
 | فایل | سرو شده از |
 |---|---|
-| `templates/accounts/register.html` | `/api/auth/register-page/` |
-| `templates/accounts/login.html` | `/api/auth/login-page/` |
-| `templates/accounts/verify.html` | `/api/auth/verify-page/` |
-| `templates/accounts/profile.html` | `/api/auth/profile-page/` |
-| `templates/payment/callback.html` | **هیچ‌جا** — `Callback` فقط JSON می‌دهد |
+| `src/templates/accounts/register.html` | `/api/auth/register-page/` |
+| `src/templates/accounts/login.html` | `/api/auth/login-page/` |
+| `src/templates/accounts/verify.html` | `/api/auth/verify-page/` |
+| `src/templates/accounts/profile.html` | `/api/auth/profile-page/` |
+| `src/templates/payment/callback.html` | **هیچ‌جا** — `Callback` فقط JSON می‌دهد |
 
 این‌ها صفحات آزمایشی هستند، نه یک فرانت‌اند کامل. پروژه عملاً **API-only** است.
 
@@ -813,11 +816,11 @@ ENV DJANGO_SETTINGS_MODULE=config.settings
 WORKDIR /app
 pip install -r requirements.txt
 کاربر غیر root: app:app
-COPY src → /app/src ;  COPY templates → /app/templates
+COPY src → /app/src
 WORKDIR /app/src
 CMD gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
 ```
-مسیرها درست در می‌آیند: `BASE_DIR=/app/src`, `PROJECT_DIR=/app` → `MEDIA_ROOT=/app/media`, `STATIC_ROOT=/app/staticfiles`, templates در `/app/templates`. ✅
+مسیرها درست در می‌آیند: `BASE_DIR=/app/src`, `PROJECT_DIR=/app` → `MEDIA_ROOT=/app/src/media`, `STATIC_ROOT=/app/staticfiles`, templates در `/app/src/templates`. ✅
 
 ### compose.yaml — ۵ سرویس
 
@@ -834,26 +837,33 @@ CMD gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
 
 ### env
 
-`.env.example` کامل و درست است. اما **`.env` واقعی** مشکل دارد:
+`.env` دیگر در گیت نیست و `.env.example` الگوی مستندشده‌ی آن است — هر دو همان ۱۶ کلید را دارند و تنها در مقدار `SECRET_KEY` تفاوت دارند:
 
 ```ini
-SECRET_KEY=django-insecure-...          ← کلید توسعه
+SECRET_KEY=…                                    ← فقط در .env محلی، ۶۴ کاراکتر تصادفی
 DEBUG=True
-DATABASE_PATH=./database/db.sqlite3     ← باقی‌مانده از دوران SQLite، بی‌استفاده
-REDIS_LOCATION=redis://127.0.0.1:6379/1
-PAYMENT_GATEWAY_API_KEY=adb7b03a-...    ← در گیت!
-SMS_API_KEY=adb7b03a-...                ← در گیت!
+ALLOWED_HOSTS=localhost,127.0.0.1,[::1]
+WEB_PORT=8000
+POSTGRES_DB / USER / PASSWORD / HOST / PORT     ← پیش‌فرض‌های توسعه
+REDIS_LOCATION=redis://127.0.0.1:6379/0         ← کش
+CELERY_BROKER_URL=redis://127.0.0.1:6379/1      ← بروکر
+CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/2  ← نتیجه
+PAYMENT_GATEWAY_API_KEY=                        ← خالی
+SMS_API_KEY=                                    ← خالی
+SMS_API_URL=                                    ← خالی
+SMS_SENDER=                                     ← خالی
 ```
 
-مشکلات:
-1. **`.env` در گیت ترک شده** (تأیید شده با `git ls-files`) — رازها در تاریخچه‌اند
-2. `POSTGRES_*` ندارد → همه از default می‌آیند
-3. `CELERY_BROKER_URL` ندارد → پیش‌فرضش `REDIS_LOCATION` (DB 1) می‌شود → **بروکر و کش روی یک DB**
-4. `DATABASE_PATH` بی‌استفاده
+وضعیت:
+1. **`.env` از گیت خارج شده** — در هیچ‌کدام از ref های قابل‌دسترس (`origin/main`, `origin/dev`) وجود ندارد ✅
+2. `POSTGRES_*` و `CELERY_*` حاضرند و `DATABASE_PATH` (باقی‌مانده‌ی SQLite) حذف شده ✅
+3. سه DB ردیس از هم جدا شده‌اند (کش `/0`، بروکر `/1`، نتیجه `/2`) → مشکل «بروکر و کش روی یک DB» برطرف است ✅
+4. ⚠️ مقدار `SECRET_KEY` در `.env.example` یک placeholder است (`replace-with-a-long-random-secret`). هر استقرار باید مقدار تصادفی خودش را تولید کند، وگرنه همه‌ی clone ها یک کلید مشترک دارند.
+5. ⚠️ کلیدهای درگاه و پیامک در فایل محلی **خالی**اند، ولی مقادیر واقعی‌شان در تاریخچه‌ی ریپوی upstream متروک (`git.uzicoders.ir`) مانده‌اند. بازنویسی تاریخچه کافی نیست — آبجکت‌های force-push شده ممکن است با SHA مستقیم روی سرور در دسترس بمانند → **روتیت سمت سرویس‌دهنده اجباری است**.
 
 ### `.gitignore`
 
-`.env` و `.env.*` را ignore می‌کند با استثنای `.env.example` — درست نوشته شده، ولی چون `.env` **قبلاً** ترک شده بوده، ignore اثری ندارد. نیاز به `git rm --cached .env`.
+خط ۳۲ دقیقاً نام `.env` را ignore می‌کند (`.env.example` الگوی دیگری است و ترک‌شده می‌ماند). چون `.env` از index خارج شده، این ignore الان واقعاً اثر دارد ✅
 
 > `opencode.json` هم ignore شده (ابزار AI).
 
@@ -979,18 +989,19 @@ SMS_API_KEY=adb7b03a-...                ← در گیت!
 
 ### 🔒 امنیت
 
-**۱۸. `.env` در گیت ترک شده** — تأیید شده با `git ls-files`. `SECRET_KEY`, `PAYMENT_GATEWAY_API_KEY`, `SMS_API_KEY` در تاریخچه‌ی گیت‌اند.
-→ `git rm --cached .env` + **روتیت کردن کلیدها** (حذف از working tree کافی نیست)
+**۱۸. ✅ `.env` از گیت خارج شد** — دیگر در هیچ ref قابل‌دسترسی نیست و تاریخچه‌ی `origin/main` هم پاک است. `SECRET_KEY` محلی روتیت شد.
+→ باقی‌مانده (کار دستی): **روتیت `PAYMENT_GATEWAY_API_KEY` و `SMS_API_KEY` در پنل سرویس‌دهنده** — مقادیر لو رفته در تاریخچه‌ی upstream متروک مانده‌اند
 
 **۱۹.** کوکی‌های JWT با `secure=False` هاردکد (`accounts/views.py:221,230`) → توکن روی HTTP لخت. باید `not settings.DEBUG`
 
 **۲۰.** `LogoutView` فقط کوکی پاک می‌کند — refresh token معتبر می‌ماند. برای ابطال واقعی `rest_framework_simplejwt.token_blacklist` لازم است
 
-**۲۱.** `UserAdmin(admin.ModelAdmin): pass` → رمز خام در ادمین قابل ویرایش و هش نمی‌شود (در TODO خط ۲۶۵ هم اشاره شده)
+**۲۱. ✅** `UserAdmin` از `django.contrib.auth.admin.UserAdmin` ارث‌بری می‌کند → رمز در ادمین هش می‌شود و در فرم تغییر فقط هش (read-only) نمایش داده می‌شود
 
 **۲۲.** `DEFAULT_THROTTLE_CLASSES` کامنت شده → ویوهای بدون throttle صریح کاملاً بازند
 
-**۲۳.** `accounts/utils.py:50` → `loger.info(f"OTP for {phone}: {otp}")` **کد OTP را لاگ می‌کند**. به‌علاوه `print()` در خطوط ۱۳,۲۵,۳۰,۳۵,۴۵-۴۸ و `dashboard/views.py:28,60`
+**۲۳. ✅** لاگ کد OTP حذف شد: `loger.info(f"OTP generated for {phone}")` دیگر خود کد را ندارد و بلوک `print` چهارخطی (`otp_generate`) پاک شد. تولید کد هم از `random.randint` به `secrets.randbelow` منتقل شد (CWE-338).
+→ باقی‌مانده (فاز ۵): `print()` های `accounts/utils.py:13,25,30,35` و `dashboard/views.py:28,60` باید `loger` شوند. خط ۱۳ عمداً تمام متن پیامک (شامل کد) را چاپ می‌کند، ولی **فقط وقتی `SMS_API_KEY`/`SMS_API_URL` تنظیم نشده‌اند** — یعنی در production که درگاه پیامک واقعی است، هیچ‌جا کد چاپ نمی‌شود. `dashboard/views.py:28` کل `request.data` پروفایل را چاپ می‌کند.
 
 **۲۴.** تنظیمات production غایب: `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_HSTS_*`; `corsheaders` نصب است ولی **هیچ `CORS_ALLOWED_ORIGINS` ندارد**; `SIMPLE_JWT` خالی است; `LOGGING` روی `DEBUG` با handler فقط console
 
@@ -1002,7 +1013,7 @@ SMS_API_KEY=adb7b03a-...                ← در گیت!
 - `dashboard/urls.py` خالی و include نشده
 - `accounts/views.py:15` → `from .models import User` که خط ۱۸ بازنویسی‌اش می‌کند
 - `src/apps/*/api/__init__.py` برای همه غایب است (namespace package کار می‌کند ولی غیراستاندارد)
-- `templates/payment/callback.html` بی‌استفاده
+- `src/templates/payment/callback.html` بی‌استفاده
 - `SMS_SENDER` در env هست، در کد نیست
 - `track_id` و `shipping_cost` فیلد دارند، منطق ندارند
 - وضعیت‌های `PREPARING/SENT/DELIVERED/CANCELED` تعریف شده، استفاده نشده
@@ -1068,10 +1079,11 @@ SMS_API_KEY=adb7b03a-...                ← در گیت!
 
 ## ۲۱. مسیر پیشنهادی
 
-### فاز ۰ — همین الان (امنیت)
-1. `git rm --cached .env` + کامیت + **روتیت کردن `PAYMENT_GATEWAY_API_KEY` و `SMS_API_KEY` و `SECRET_KEY`**
-2. حذف لاگ کد OTP (`accounts/utils.py:50`)
-3. `UserAdmin` را از `django.contrib.auth.admin.UserAdmin` ارث‌بری کن
+### فاز ۰ — همین الان (امنیت) ✅ انجام شد
+1. ✅ `.env` از گیت خارج شد (در هیچ ref قابل‌دسترسی نیست) و `SECRET_KEY` محلی با ۶۴ کاراکتر تصادفی عوض شد
+   ⚠️ **باقی‌مانده و دستی: `PAYMENT_GATEWAY_API_KEY` و `SMS_API_KEY` باید در پنل سرویس‌دهنده روتیت شوند** — مقادیر لو رفته در تاریخچه‌ی upstream متروک باقی می‌مانند
+2. ✅ لاگ کد OTP حذف شد (`accounts/utils.py`) + تولید کد با `secrets` به‌جای `random`
+3. ✅ `UserAdmin` از `django.contrib.auth.admin.UserAdmin` ارث‌بری می‌کند (fieldset ها برای مدل ایمیل‌محور بازنویسی شدند)
 
 ### فاز ۱ — پروژه را قابل اجرا کن (موارد ۱-۵)
 4. `phone` را به `RegisterSerializer.Meta.fields` اضافه کن، دو `validate_phone` تکراری را به یکی کن

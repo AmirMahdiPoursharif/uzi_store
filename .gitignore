@@ -42,7 +42,7 @@ opencode.json
 
 # Runtime files and database exports
 staticfiles/
-database/*.json
+src/database/*.json
 backups/
 *.sqlite3
 *.sqlite3-*

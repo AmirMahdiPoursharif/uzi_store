@@ -10,9 +10,9 @@ env
 .pytest_cache
 .idea
 .vscode
-database
+src/database
 backups
-media
+src/media
 staticfiles
 *.sqlite3
 *.sqlite3-*
