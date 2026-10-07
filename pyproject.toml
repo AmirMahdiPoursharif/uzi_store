@@ -1,0 +1,20 @@
+# Ruff (linter + formatter) configuration for uzi-store.
+# Discovered automatically by `ruff` and by the `.githooks/pre-commit` hook.
+
+[tool.ruff]
+# Matches `python:3.13` in Dockerfile / Dockerfile.dev.
+target-version = "py313"
+
+# Apply `extend-exclude` even to files passed explicitly on the command line.
+# The pre-commit hook passes staged paths directly, so this is what keeps
+# generated files out of the gate.
+force-exclude = true
+
+extend-exclude = [
+    "**/migrations/*", # generated Django migrations
+    "**/media/*",      # uploaded media
+    "**/staticfiles/*", # collectstatic output
+]
+
+# Lint rules intentionally use Ruff's defaults: no `[tool.ruff.lint] select`
+# override, so the rule set only changes when Ruff itself is upgraded.

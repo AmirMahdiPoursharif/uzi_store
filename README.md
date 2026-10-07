@@ -16,8 +16,8 @@ credentials are for local use; choose a strong password before deployment.
 ## Local development
 
 ```sh
-docker compose -f compose.yaml -f compose.dev.yaml up --build -d
-docker compose -f compose.yaml -f compose.dev.yaml logs -f web
+docker compose up --build -d
+docker compose logs -f web
 ```
 
 Open http://localhost:8000/admin/ or http://localhost:8000/user/products/.
@@ -27,13 +27,14 @@ Restart `worker` and `beat` after changing task code. This override enables
 `DEBUG` and exposes Redis on localhost for local tools.
 
 ```sh
-docker compose -f compose.yaml -f compose.dev.yaml exec web python manage.py createsuperuser
-docker compose -f compose.yaml -f compose.dev.yaml exec web python manage.py test accounts dashboard product cart
-docker compose -f compose.yaml -f compose.dev.yaml down
+docker compose exec web python manage.py createsuperuser
+docker compose exec web python manage.py test accounts dashboard product cart
+docker compose down
 ```
 
-Use both `-f` arguments for development commands. The two configurations share
-the same database and media; run one configuration at a time.
+`docker-compose.override.yaml` is loaded automatically, so the commands above
+are the development stack. Both configurations share the same database and
+media; run one configuration at a time.
 
 ## Tests
 
@@ -64,13 +65,58 @@ Pytest-django creates a separate test database; the PostgreSQL user must have
 permission to create databases. New pytest functions that access the database
 should use `@pytest.mark.django_db` or the `db` fixture.
 
-## Default containers
+## Linting
+
+Linting and formatting use [Ruff](https://docs.astral.sh/ruff/). The
+configuration lives in `pyproject.toml` (`[tool.ruff]`); generated files
+(`migrations/`, `media/`, `staticfiles/`) are excluded. Manual commands from
+the repository root:
 
 ```sh
-docker compose up --build -d
-docker compose logs -f web
-docker compose exec web python manage.py createsuperuser
-docker compose down
+ruff check .               # lint, report only
+ruff format --check .      # formatting check, changes nothing
+ruff check --fix .         # apply safe auto-fixes
+ruff format .              # apply formatting
+```
+
+### pre-commit hook
+
+`.githooks/pre-commit` (versioned in the repo) turns `git commit` into an
+interactive Ruff quality gate. Enable it once per clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+On every `git commit` it runs `ruff check` and `ruff format --check` on the
+staged `.py` files. If everything is clean it prints `Ruff passed.` and the
+commit continues. Otherwise it shows the issues (with totals, which are
+auto-fixable, and formatting diffs) and asks before touching anything:
+
+```text
+Ruff found issues. Apply safe automatic fixes? [y/N]
+```
+
+Only an explicit `y` runs `ruff check --fix` (safe fixes only); formatting is
+edited only after a second, separate `y` at `Apply ruff format? [y/N]`. Any
+other answer changes nothing and blocks the commit. Git hands hooks their
+stdin as `/dev/null`, so the prompts are read from your terminal (`/dev/tty`);
+when there is no terminal (CI, GUI clients) the answer counts as `N` and the
+commit is blocked. Ruff is re-run afterwards
+and the commit continues only when everything is clean. Avoid
+`git commit --no-verify`, which bypasses the gate.
+
+## Base containers
+
+`docker-compose.override.yaml` is auto-loaded for development (Django's dev
+server with the source mounted). The commands below opt out of it and describe
+the base `docker-compose.yaml` (Gunicorn, no source mount):
+
+```sh
+docker compose -f docker-compose.yaml up --build -d
+docker compose -f docker-compose.yaml logs -f web
+docker compose -f docker-compose.yaml exec web python manage.py createsuperuser
+docker compose -f docker-compose.yaml down
 ```
 
 `Dockerfile` runs Gunicorn as an unprivileged user. Compose starts PostgreSQL and
@@ -124,5 +170,6 @@ hashes, relationships, and media paths are preserved. `loaddata` resets PostgreS
 sequences. Keep the SQLite backup until the imported records are verified.
 The JSON export contains private application data and is ignored by Git.
 
-For the development stack, use `docker compose -f compose.yaml -f compose.dev.yaml`
-in place of `docker compose` throughout the transfer commands.
+For the development stack, the bare `docker compose` commands above already
+apply `docker-compose.override.yaml`; prepend `-f docker-compose.yaml` instead
+only when you want the base (Gunicorn) image for the transfer.

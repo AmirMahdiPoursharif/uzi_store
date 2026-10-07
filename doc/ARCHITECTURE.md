@@ -96,7 +96,8 @@ uzi-store/
 │   ├── CART_APP.md
 │   └── PRODUCT_APP.md
 ├── Dockerfile
-├── compose.yaml
+├── docker-compose.yaml
+├── docker-compose.override.yaml
 ├── requirements.txt
 ├── .env  (ignore شده — در گیت نیست ✅)
 └── .env.example
@@ -822,7 +823,7 @@ CMD gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
 ```
 مسیرها درست در می‌آیند: `BASE_DIR=/app/src`, `PROJECT_DIR=/app` → `MEDIA_ROOT=/app/src/media`, `STATIC_ROOT=/app/staticfiles`, templates در `/app/src/templates`. ✅
 
-### compose.yaml — ۵ سرویس
+### docker-compose.yaml — ۵ سرویس
 
 | سرویس | نقش |
 |---|---|
@@ -834,6 +835,8 @@ CMD gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
 | `beat` | `celery -A config beat --scheduler django_celery_beat...DatabaseScheduler` |
 
 انکر `x-app` مشترک: `env_file: .env` + override کردن `POSTGRES_HOST=db`, `REDIS_LOCATION=redis://redis:6379/0`, بروکر `/1`, بک‌اند نتیجه `/2`. تفکیک DB های Redis درست انجام شده. ✅
+
+`docker-compose.override.yaml` هم به‌صورت خودکار توسط `docker compose` بارگذاری می‌شود و استک توسعه را می‌سازد: `Dockerfile.dev`، `runserver` با auto-reload، `DEBUG=True` و mount کردن `./src`. برای اجرای استک production-shaped (Gunicorn، بدون mount) باید صریحاً `docker compose -f docker-compose.yaml` زد تا override نادیده گرفته شود.
 
 ### env
 

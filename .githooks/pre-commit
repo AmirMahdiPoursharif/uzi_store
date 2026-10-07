@@ -1,0 +1,237 @@
+#!/bin/sh
+#
+# pre-commit - interactive Ruff quality gate.
+#
+# Runs `ruff check` and `ruff format --check` on the Python files staged for
+# this commit. Source files are NEVER modified unless the user explicitly
+# answers "y" at the prompts; the only tools ever allowed to change code are
+# `ruff check --fix` (safe fixes only) and `ruff format` (separate prompt).
+#
+# Exit codes:
+#   0  Ruff clean (originally, or after accepted and successful fixes)
+#   1  Ruff issues remain (fixes declined, or issues left after fixing)
+#   2  Ruff could not run (not installed / fatal error)
+#
+# One-time setup after cloning:  git config core.hooksPath .githooks
+# Bypass (avoid):               git commit --no-verify
+
+set -u
+
+# Work from the repository root so Ruff config discovery is stable.
+toplevel=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    printf '%s\n' "pre-commit: not inside a Git working tree."
+    exit 2
+}
+cd "$toplevel" || exit 2
+
+# ---------------------------------------------------------------------------
+# Locate Ruff (standalone binary first, then as a Python module)
+# ---------------------------------------------------------------------------
+RUFF_CMD=""
+if command -v ruff >/dev/null 2>&1; then
+    RUFF_CMD="ruff"
+else
+    for py in python3 python py; do
+        if command -v "$py" >/dev/null 2>&1 && "$py" -m ruff --version >/dev/null 2>&1; then
+            RUFF_CMD="$py -m ruff"
+            break
+        fi
+    done
+fi
+if [ -z "$RUFF_CMD" ]; then
+    printf '%s\n' "pre-commit: Ruff is not installed - commit blocked."
+    printf '%s\n' "Install it with:  python -m pip install -r requirements.txt"
+    exit 2
+fi
+run_ruff() { $RUFF_CMD "$@"; } # word splitting is intended ("python -m ruff")
+
+# ---------------------------------------------------------------------------
+# Python files staged for this commit (added / renamed / copied / modified)
+# ---------------------------------------------------------------------------
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.py')
+if [ -z "$staged" ]; then
+    printf '%s\n' "Ruff passed. (no staged Python files)"
+    exit 0
+fi
+
+OLDIFS=$IFS
+set -f
+IFS='
+'
+set -- $staged
+IFS=$OLDIFS
+set +f
+
+# Staged files that also carry unrelated (unstaged) edits: their Ruff fixes
+# must never be swept into the commit automatically.
+dirty=""
+for f in "$@"; do
+    if ! git diff --quiet -- "$f" 2>/dev/null; then
+        dirty="$dirty|$f|"
+    fi
+done
+
+# ---------------------------------------------------------------------------
+# Helpers to extract counts from Ruff's own summaries
+# ---------------------------------------------------------------------------
+lint_count() { printf '%s\n' "$1" | sed -n 's/^Found \([0-9][0-9]*\) error.*/\1/p'; }
+fixable_count() { printf '%s\n' "$1" | sed -n 's/^\[\*\] \([0-9][0-9]*\) fixable.*/\1/p'; }
+unsafe_count() { printf '%s\n' "$1" | sed -n 's/.*(\([0-9][0-9]*\) hidden fixes.*/\1/p'; }
+fmt_count() { printf '%s\n' "$1" | sed -n 's/^\([0-9][0-9]*\) files* would be reformatted.*/\1/p'; }
+or_zero() {
+    if [ -n "$1" ]; then printf '%s' "$1"; else printf '0'; fi
+}
+
+# Read a y/N answer.
+# `git commit` runs its hooks with stdin pointing at /dev/null, so stdin alone
+# can never collect an answer during a commit. Try stdin first (manual runs,
+# pipes, `git hook run` with redirected input), then fall back to the
+# controlling terminal, which is what an interactive `git commit` has. With
+# neither (CI, GUI clients without a terminal) the answer stays empty = "N".
+read_answer() {
+    if IFS= read -r ANSWER; then
+        :
+    else
+        ANSWER=$(
+            {
+                IFS= read -r a && printf '%s' "$a"
+            } 2>/dev/null < /dev/tty
+        ) || ANSWER=""
+    fi
+    ANSWER=$(printf '%s' "$ANSWER" | tr -d '\r') # tolerate CRLF (cmd/PowerShell)
+}
+
+# ---------------------------------------------------------------------------
+# First pass: report only, never modify anything
+# ---------------------------------------------------------------------------
+lint_out=$(run_ruff check --output-format=concise -- "$@" 2>&1)
+lint_rc=$?
+if [ "$lint_rc" -ge 2 ]; then
+    printf '%s\n' "$lint_out"
+    printf '%s\n' "pre-commit: 'ruff check' could not run (exit $lint_rc) - commit blocked."
+    exit 2
+fi
+
+fmt_out=$(run_ruff format --check -- "$@" 2>&1)
+fmt_rc=$?
+if [ "$fmt_rc" -ge 2 ]; then
+    printf '%s\n' "$fmt_out"
+    printf '%s\n' "pre-commit: 'ruff format --check' could not run (exit $fmt_rc) - commit blocked."
+    exit 2
+fi
+
+if [ "$lint_rc" -eq 0 ] && [ "$fmt_rc" -eq 0 ]; then
+    printf '%s\n' "Ruff passed."
+    exit 0
+fi
+
+if [ "$lint_rc" -ne 0 ]; then
+    printf '\n%s\n' "=== ruff check (lint) ==="
+    printf '%s\n' "$lint_out"
+    printf '%s\n' "Lint issues: $(or_zero "$(lint_count "$lint_out")") total | $(or_zero "$(fixable_count "$lint_out")") safe auto-fixable (marked [*]) | $(or_zero "$(unsafe_count "$lint_out")") unsafe (never applied automatically)"
+fi
+if [ "$fmt_rc" -ne 0 ]; then
+    printf '\n%s\n' "=== ruff format --check (formatting) ==="
+    printf '%s\n' "$fmt_out"
+    printf '%s\n' "Formatting issues: $(or_zero "$(fmt_count "$fmt_out")") file(s) would be reformatted"
+fi
+
+# ---------------------------------------------------------------------------
+# Opt-in: safe lint fixes (`ruff check --fix`, never --unsafe-fixes)
+# ---------------------------------------------------------------------------
+if [ "$lint_rc" -ne 0 ]; then
+    printf '\n%s' "Ruff found issues. Apply safe automatic fixes? [y/N] "
+    read_answer
+    case "$ANSWER" in
+        y | Y | yes | Yes | YES) ;;
+        *)
+            printf '\n%s\n' "No changes were made. Commit blocked - fix the issues above (or run git commit again and answer y)."
+            exit 1
+            ;;
+    esac
+    printf '\n%s\n' "=== ruff check --fix (safe fixes only) ==="
+    run_ruff check --fix --output-format=concise -- "$@"
+    fix_rc=$?
+    if [ "$fix_rc" -ge 2 ]; then
+        printf '%s\n' "pre-commit: 'ruff check --fix' could not run (exit $fix_rc) - commit blocked."
+        exit 2
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Opt-in: formatting (separate confirmation, only when it has problems)
+# ---------------------------------------------------------------------------
+if [ "$fmt_rc" -ne 0 ]; then
+    printf '\n%s' "Ruff found formatting issues. Apply ruff format? [y/N] "
+    read_answer
+    case "$ANSWER" in
+        y | Y | yes | Yes | YES)
+            printf '\n%s\n' "=== ruff format ==="
+            run_ruff format -- "$@"
+            fmt_fix_rc=$?
+            if [ "$fmt_fix_rc" -ge 2 ]; then
+                printf '%s\n' "pre-commit: 'ruff format' could not run (exit $fmt_fix_rc) - commit blocked."
+                exit 2
+            fi
+            ;;
+        *)
+            printf '%s\n' "Formatting was left unchanged."
+            ;;
+    esac
+fi
+
+# ---------------------------------------------------------------------------
+# Re-check: the commit continues only if everything is clean now
+# ---------------------------------------------------------------------------
+printf '\n%s\n' "=== re-check ==="
+lint_out=$(run_ruff check --output-format=concise -- "$@" 2>&1)
+lint_rc=$?
+fmt_out=$(run_ruff format --check -- "$@" 2>&1)
+fmt_rc=$?
+if [ "$lint_rc" -ge 2 ] || [ "$fmt_rc" -ge 2 ]; then
+    printf '%s\n' "pre-commit: Ruff could not re-run - commit blocked."
+    printf '%s\n' "$lint_out"
+    printf '%s\n' "$fmt_out"
+    exit 2
+fi
+
+if [ "$lint_rc" -eq 0 ] && [ "$fmt_rc" -eq 0 ]; then
+    re_staged=""
+    left_dirty=""
+    for f in "$@"; do
+        if git diff --quiet -- "$f" 2>/dev/null; then
+            continue # Ruff did not touch this file
+        fi
+        case "$dirty" in
+            *"|$f|"*)
+                left_dirty="$left_dirty $f"
+                ;;
+            *)
+                if git add -- "$f" 2>/dev/null; then
+                    re_staged="$re_staged $f"
+                fi
+                ;;
+        esac
+    done
+    printf '%s\n' "Ruff passed."
+    if [ -n "$re_staged" ]; then
+        printf '%s\n' "Applied auto-fixes, staged for this commit:$re_staged"
+    fi
+    if [ -n "$left_dirty" ]; then
+        printf '%s\n' "NOTE: unstaged edits already existed in:$left_dirty"
+        printf '%s\n' "      Their Ruff fixes (if any) were NOT auto-staged; review and 'git add' yourself."
+    fi
+    exit 0
+fi
+
+printf '\n%s\n' "=== remaining issues ==="
+if [ "$lint_rc" -ne 0 ]; then
+    printf '%s\n' "$lint_out"
+    printf '%s\n' "Lint issues remaining: $(or_zero "$(lint_count "$lint_out")") (safe auto-fixable: $(or_zero "$(fixable_count "$lint_out")"))"
+fi
+if [ "$fmt_rc" -ne 0 ]; then
+    printf '%s\n' "$fmt_out"
+    printf '%s\n' "Formatting issues remaining: $(or_zero "$(fmt_count "$fmt_out")") file(s)"
+fi
+printf '\n%s\n' "Commit blocked: Ruff issues remain. No further automatic changes were made."
+exit 1

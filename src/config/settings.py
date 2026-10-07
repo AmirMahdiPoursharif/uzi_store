@@ -202,6 +202,7 @@ REST_FRAMEWORK = {
         'order_create': '5/min',
         'payment': '5/min',
         'callback': '20/min',
+        'manager': '60/min',
         'product_category_read': '60/min',
         'review_reply_create_read': '30/min',
     }

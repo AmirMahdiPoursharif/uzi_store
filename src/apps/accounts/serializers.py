@@ -13,20 +13,6 @@ def name_validator(value):
         raise serializers.ValidationError("نام باید فقط شامل حروف فارسی یا انگلیسی باشد")
     return value.strip()
 
-def validate_phone(self, value):
-    value = value.strip()
-    value = re.sub(r'[^0-9]', '', value)
-    if value.startswith('0'):
-        value = value[1:]
-    if value.startswith('98'):
-        value = value[2:]
-    if len(value) != 10:
-        raise serializers.ValidationError("شماره تلفن معتبر نیست")
-    value = '0' + value
-    if User.objects.filter(phone=value).exists():
-        raise serializers.ValidationError("این شماره تلفن قبلاً ثبت شده است")
-    
-    return value
 def strong_password_validator(password):
     if not re.search(r'[A-Z]', password):
         raise serializers.ValidationError('رمز عبور باید حداقل یک حرف بزرگ داشته باشد.')
@@ -40,6 +26,12 @@ def strong_password_validator(password):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    # Declared explicitly rather than left to ModelSerializer: the model field is
+    # `null=True, blank=True`, so the generated field would be `required=False`
+    # (and would carry phonenumber_field's E.164-only validator, which rejects the
+    # local `09...` format this API accepts). `validate_phone` below does the
+    # format checking and normalisation.
+    phone = serializers.CharField(required=True, allow_null=False, allow_blank=False, max_length=15)
     password = serializers.CharField(write_only=True, required=True,
                                      validators=[validate_password, strong_password_validator],
                                      style={'input_type': 'password'})
@@ -47,7 +39,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'password', 'password2']
+        fields = ['email', 'phone', 'first_name', 'last_name', 'password', 'password2']
 
     def validate_email(self, value):
         try:

@@ -9,6 +9,7 @@ class CartAppConfig(AppConfig):
 
     def ready(self):
         """
-        Override the ready method to explicitly import and register 
+        Override the ready method to explicitly import and register
         application signals (like automatic cart creation) on startup.
         """
+        import cart.signals

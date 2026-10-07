@@ -3,7 +3,7 @@ import logging
 from common.http import HttpError, post_json
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F, When, IntegerField, Case
+from django.db.models import F, When, IntegerField, Case, Prefetch
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
@@ -287,13 +287,19 @@ class ManagerPanelView(ListAPIView):
 
 class ManagerOrderPanelView(RetrieveAPIView):
     permission_classes = [IsManager]
+    serializer_class = OrderDetailSerializer
     lookup_field = "order_id"
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "manager"
 
+    # OrderDetailSerializer nests order_items -> product -> category, so pull the
+    # whole tree in two queries instead of one per item. `user` is rendered as a bare
+    # pk (uses order.user_id), so select_related("user") here would be a dead join.
+    queryset = Order.objects.prefetch_related(
+        Prefetch(
+            "order_items",
+            queryset=OrderItem.objects.select_related("product__category"),
+        )
+    )
+
 # Created with ❤️ by (dizi) amirmahdi for uzi
-
-
-# TODO
-#   error in ManagerOrderPanelView:
-#       AssertionError: 'ManagerOrderPanelView' should either include a `queryset` attribute, or override the `get_queryset()` method.

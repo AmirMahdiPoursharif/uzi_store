@@ -8,7 +8,7 @@ Django 5.2 + DRF e-commerce backend (API-only; the HTML templates are test pages
 
 ## Commands
 
-Everything runs through Docker Compose. **`compose.override.yaml` is auto-loaded by `docker compose`**, so the bare command already gives you the dev stack (`Dockerfile.dev`, `runserver` with auto-reload, `DEBUG=True`, `./src` bind-mounted, including templates).
+Everything runs through Docker Compose. **`docker-compose.override.yaml` is auto-loaded by `docker compose`**, so the bare command already gives you the dev stack (`Dockerfile.dev`, `runserver` with auto-reload, `DEBUG=True`, `./src` bind-mounted, including templates).
 
 ```sh
 docker compose up --build -d          # dev stack (override applies automatically)
@@ -19,7 +19,7 @@ docker compose down                   # keeps volumes; -v also drops the PG data
 To run the production-shaped stack (Gunicorn, no source mount), opt out of the override explicitly:
 
 ```sh
-docker compose -f compose.yaml up --build -d
+docker compose -f docker-compose.yaml up --build -d
 ```
 
 Management commands and tests:
@@ -34,9 +34,9 @@ docker compose exec web python manage.py test product.tests.CacheSignalsTests.te
 
 Working dir inside the container is `/app/src`, so `manage.py` is on the path. Restart `worker` and `beat` after editing task code — the dev override only auto-reloads `web`.
 
-Note: `README.md` tells you to pass `-f compose.yaml -f compose.dev.yaml`. **That file does not exist** — it was renamed to `compose.override.yaml`. Drop the `-f` flags entirely. The README is otherwise accurate, including the one-time SQLite→PostgreSQL transfer procedure.
+Note: the compose files are named `docker-compose.yaml` (base) and `docker-compose.override.yaml` (dev, auto-loaded). Bare `docker compose` commands need no `-f` flags; pass `-f docker-compose.yaml` alone to opt out of the override. `README.md` is accurate, including the one-time SQLite→PostgreSQL transfer procedure.
 
-There is no linter, formatter, pytest config, `conftest.py`, or CI in this repo.
+Linting and formatting use Ruff (`pyproject.toml` → `[tool.ruff]`; migrations/media/staticfiles excluded), gated by the versioned `.githooks/pre-commit` hook — enable it per clone with `git config core.hooksPath .githooks` (already set in this checkout). The hook runs `ruff check` + `ruff format --check` on staged `.py` files, prints the issues, and only edits code after an explicit `y` at its prompts (`ruff check --fix`, then a separate prompt for `ruff format`). Manual commands: `ruff check .`, `ruff format --check .`, `ruff check --fix .`, `ruff format .`. Git supplies hooks with stdin from `/dev/null`, so the prompts read `/dev/tty` instead; non-interactive commits (no terminal) count as "N" and are blocked. Tests use pytest (`pytest.ini`). There is no CI in this repo.
 
 ## Architecture
 

@@ -27,6 +27,7 @@ share/python-wheels/
 
 
 .pytest_cache/
+.ruff_cache/
 
 # Environments
 .env
@@ -46,4 +47,4 @@ src/database/*.json
 backups/
 *.sqlite3
 *.sqlite3-*
-.claude/
+.claude/settings.local.json

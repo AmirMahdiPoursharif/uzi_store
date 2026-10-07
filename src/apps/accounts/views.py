@@ -12,7 +12,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import RegisterSerializer, VerifySerializer, ResendotpSerializer
 from .utils import otp_generate, otp_verify
 from django.shortcuts import render
-from .models import User
 
 # Create your views here.
 User = get_user_model()
@@ -139,10 +138,10 @@ class ResendotpView(views.APIView):
     def post(self, request):
         serializer = ResendotpSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response({'message': 'ایمیل معتبر وارد کنید'}, status=status.HTTP_400_BAD_REQUEST)
-        email = serializer.validated_data['email'].lower().strip()
+            return Response({'message': 'شماره تلفن معتبر وارد کنید'}, status=status.HTTP_400_BAD_REQUEST)
+        phone = serializer.validated_data['phone']
         client_ip = get_client_ip(request)
-        last_sent = cache.get(f'resend_otp_{email}')
+        last_sent = cache.get(f'resend_otp_{phone}')
         if last_sent:
             return Response({'message': 'لطفاً ۲ دقیقه صبر کنید تا دوباره تلاش کنید'},
                             status=status.HTTP_429_TOO_MANY_REQUESTS)
@@ -152,18 +151,18 @@ class ResendotpView(views.APIView):
             return Response({'message': 'درخواست بیش از حد از این IP. لطفاً بعداً تلاش کنید.'},
                             status=status.HTTP_429_TOO_MANY_REQUESTS)
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(phone=phone)
             if user.is_active:
                 return Response({'message': 'این حساب قبلاً تأیید شده است. لطفاً وارد شوید.'},
                                 status=status.HTTP_400_BAD_REQUEST)
-            otp = otp_generate(email)
-            send_otp_email(email, otp)
-            cache.set(f'resend_otp_{email}', True, timeout=120)
+            # otp_generate() caches the code at otp_<phone> and sends the SMS itself.
+            otp_generate(phone)
+            cache.set(f'resend_otp_{phone}', True, timeout=120)
             cache.set(ip_resend_key, ip_resend_attempts + 1, timeout=3600)
-            return Response({'message': 'کد تأیید جدید به ایمیل شما ارسال شد'}, status=status.HTTP_200_OK)
+            return Response({'message': 'کد تأیید جدید به شماره تلفن شما پیامک شد'}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
-            loger.info(f"Resend OTP for non-existent email: {email[:3]}***")
-            return Response({'message': 'اگر این ایمیل ثبت شده باشد، کد تأیید ارسال خواهد شد'},
+            loger.info(f"Resend OTP for non-existent phone: {phone[:3]}***")
+            return Response({'message': 'اگر این شماره تلفن ثبت شده باشد، کد تأیید پیامک خواهد شد'},
                             status=status.HTTP_200_OK)
 
 

@@ -1,0 +1,4 @@
+# `.githooks/pre-commit` is executed by Git's POSIX shell (Git for Windows
+# ships bash). Keep it LF-terminated even when core.autocrlf would otherwise
+# convert text files to CRLF on checkout, which would break the hook.
+.githooks/* text eol=lf
