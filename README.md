@@ -2,6 +2,8 @@
 
 Django 5.2 API with PostgreSQL 17, Redis, and Celery.
 
+راهنمای فارسی راه‌اندازی، APIها و رفتار فعلی هر اپ: [مستندات بک‌اند](doc/README.md).
+
 ## Setup
 
 Install Docker with Docker Compose v2. From the repository root, copy
@@ -79,32 +81,7 @@ ruff check --fix .         # apply safe auto-fixes
 ruff format .              # apply formatting
 ```
 
-### pre-commit hook
-
-`.githooks/pre-commit` (versioned in the repo) turns `git commit` into an
-interactive Ruff quality gate. Enable it once per clone:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-On every `git commit` it runs `ruff check` and `ruff format --check` on the
-staged `.py` files. If everything is clean it prints `Ruff passed.` and the
-commit continues. Otherwise it shows the issues (with totals, which are
-auto-fixable, and formatting diffs) and asks before touching anything:
-
-```text
-Ruff found issues. Apply safe automatic fixes? [y/N]
-```
-
-Only an explicit `y` runs `ruff check --fix` (safe fixes only); formatting is
-edited only after a second, separate `y` at `Apply ruff format? [y/N]`. Any
-other answer changes nothing and blocks the commit. Git hands hooks their
-stdin as `/dev/null`, so the prompts are read from your terminal (`/dev/tty`);
-when there is no terminal (CI, GUI clients) the answer counts as `N` and the
-commit is blocked. Ruff is re-run afterwards
-and the commit continues only when everything is clean. Avoid
-`git commit --no-verify`, which bypasses the gate.
+Ruff is run manually; commits are not gated by a Git hook.
 
 ## Base containers
 

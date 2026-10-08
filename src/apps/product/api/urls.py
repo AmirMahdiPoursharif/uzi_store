@@ -1,6 +1,7 @@
 from django.urls import path
 from product.api import views
 
+# این مجموعه مستقیماً در ریشه URLها نصب شده و پیشوند هر مسیر در همین‌جا آمده است.
 urlpatterns = [
     # Public & User Endpoints (Products & Categories)
     path("user/products/", views.UserProductListView.as_view(), name="user_product_list"),

@@ -13,4 +13,5 @@ from django.core.asgi import get_asgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
+# سرور ASGI این callable را برای ورود درخواست‌ها به Django بارگذاری می‌کند.
 application = get_asgi_application()

@@ -19,6 +19,7 @@ class ProductImageAdmin(admin.ModelAdmin):
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     """Configuration for managing Categories in the Django admin interface."""
+    # فرم مدیریت از نام دسته برای پیشنهاد مقدار slug استفاده می‌کند.
     prepopulated_fields = {"slug": ("name",)}
     list_display = ("name",)
 

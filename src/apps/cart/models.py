@@ -45,4 +45,5 @@ class CartItem(models.Model):
 
     def get_cost(self):
         """Calculates the total cost for this specific item line (price * quantity)."""
+        # مبلغ سبد با قیمت فعلی محصول محاسبه می‌شود؛ تثبیت قیمت هنگام ایجاد سفارش است.
         return self.product.price * self.quantity

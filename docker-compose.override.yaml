@@ -7,6 +7,7 @@ x-dev-app: &dev-app
   environment:
     DEBUG: "True"
   volumes:
+    # اتصال مستقیم src باعث می‌شود ویرایش فایل‌های میزبان داخل کانتینر هم دیده شود.
     - ./src:/app/src
 
 services:

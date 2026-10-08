@@ -7,6 +7,7 @@ import re
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
+    # این serializer فیلدهای خود User را پوشش می‌دهد، نه نشانی ذخیره‌شده در Profile.
     class Meta:
         model = User
         fields = ['email', 'first_name', 'last_name','phone']
@@ -23,6 +24,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         return value
     def validate_email(self, value):
         user = self.context['request'].user
+        # هنگام بررسی ایمیل تکراری، حساب کاربر جاری از جست‌وجو کنار گذاشته می‌شود.
         if User.objects.filter(email=value).exclude(id=user.id).exists():
             raise serializers.ValidationError("این ایمیل قبلاً توسط کاربر دیگری استفاده شده است")
         return value.lower().strip()
@@ -35,6 +37,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("نام خانوادگی نمی‌تواند بیشتر از 100 کاراکتر باشد")
         return value.strip()
 class ChangePasswordSerializer(serializers.Serializer):
+    # تطبیق رمز جدید اینجا انجام می‌شود؛ بررسی رمز فعلی بر عهده view است.
     old_password = serializers.CharField(required=True, write_only=True)
     new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])
     confirm_password = serializers.CharField(required=True, write_only=True)
@@ -44,6 +47,7 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({"confirm_password": "رمز عبور جدید و تکرار آن مطابقت ندارند"})
         return attrs
 class DeleteAccountSerializer(serializers.Serializer):
+    # حذف حساب علاوه بر رمز عبور به تأیید صریح کاربر نیاز دارد.
     password = serializers.CharField(required=True, write_only=True)
     confirm = serializers.BooleanField(required=True, write_only=True)
     def validate(self, attrs):
@@ -51,6 +55,7 @@ class DeleteAccountSerializer(serializers.Serializer):
             raise serializers.ValidationError({"confirm": "برای حذف حساب، باید تایید کنید"})
         return attrs
 class ProfileSerializer(serializers.ModelSerializer):
+    # sourceهای user.* داده‌های حساب را در کنار فیلدهای نشانی در یک پاسخ نمایش می‌دهند.
     email = serializers.EmailField(source='user.email', read_only=True)
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
@@ -82,6 +87,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         return value
 
     def validate_postal_code(self, value):
+        # کد پستی اختیاری است؛ مقدار غیرخالی بعد از حذف نویسه‌های غیرعددی باید ده رقم باشد.
         if not value:
             return value
         value = re.sub(r'[^0-9]', '', value)

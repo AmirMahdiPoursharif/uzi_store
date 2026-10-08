@@ -16,4 +16,5 @@ class IsOwnerOrAdmin(BasePermission):
             return False
         
         # Grant access if the user owns the object or has superuser privileges
+        # پرچم مدیریتی مورد استفاده is_staff است؛ مالک نیز اجازه تغییر شیء خودش را دارد.
         return obj.user == request.user or request.user.is_staff

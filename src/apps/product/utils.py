@@ -12,6 +12,7 @@ def product_images_path(instance, filename):
     # Define explicitly allowed image formats
     accepted_types = ("png", "jpg", "jpeg", "webp",)
     # Extract the file extension
+    # بررسی فعلی بر پسوند نام فایل متکی است و بزرگی یا کوچکی حروف را یکسان نمی‌کند.
     fmt = filename.split('.')[-1]
     if fmt in accepted_types:
         # Generate a unique filename while preserving the valid extension

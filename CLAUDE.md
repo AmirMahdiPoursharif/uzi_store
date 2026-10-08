@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Django 5.2 + DRF e-commerce backend (API-only; the HTML templates are test pages). PostgreSQL 17, Redis, Celery. All Python lives under `src/`; `doc/ARCHITECTURE.md` is a detailed Persian walkthrough of every model, endpoint, and known defect — read it before any non-trivial change.
+Django 5.2 + DRF e-commerce backend (API-only; the HTML templates are test pages). PostgreSQL 17, Redis, Celery. All Python lives under `src/`. Start with `doc/README.md` for the current Persian setup and per-app API guides, then read the relevant app document before a non-trivial change. `doc/ARCHITECTURE.md` is an older walkthrough; verify its defect list against current code.
 
 ## Commands
 
@@ -36,7 +36,7 @@ Working dir inside the container is `/app/src`, so `manage.py` is on the path. R
 
 Note: the compose files are named `docker-compose.yaml` (base) and `docker-compose.override.yaml` (dev, auto-loaded). Bare `docker compose` commands need no `-f` flags; pass `-f docker-compose.yaml` alone to opt out of the override. `README.md` is accurate, including the one-time SQLite→PostgreSQL transfer procedure.
 
-Linting and formatting use Ruff (`pyproject.toml` → `[tool.ruff]`; migrations/media/staticfiles excluded), gated by the versioned `.githooks/pre-commit` hook — enable it per clone with `git config core.hooksPath .githooks` (already set in this checkout). The hook runs `ruff check` + `ruff format --check` on staged `.py` files, prints the issues, and only edits code after an explicit `y` at its prompts (`ruff check --fix`, then a separate prompt for `ruff format`). Manual commands: `ruff check .`, `ruff format --check .`, `ruff check --fix .`, `ruff format .`. Git supplies hooks with stdin from `/dev/null`, so the prompts read `/dev/tty` instead; non-interactive commits (no terminal) count as "N" and are blocked. Tests use pytest (`pytest.ini`). There is no CI in this repo.
+Linting and formatting use Ruff (`pyproject.toml` -> `[tool.ruff]`; migrations/media/staticfiles excluded). Run it manually: `ruff check .`, `ruff format --check .`, `ruff check --fix .`, `ruff format .`. There is no project pre-commit hook or Ruff commit gate. Tests use pytest (`pytest.ini`). There is no CI in this repo.
 
 ## Architecture
 
@@ -108,19 +108,17 @@ Registration is phone-OTP based: OTP is cached at `otp_<phone>` for 300s and sen
 
 `config/celery.py` with `app = Celery("uzistore")`; `config/__init__.py` re-exports `celery_app`. Worker and beat run as `-A config`. Beat uses `django_celery_beat`'s `DatabaseScheduler`. The only task is `order.api.tasks.delete_expired_orders`, registered in `CELERY_BEAT_SCHEDULE`.
 
-## Known-broken areas
+## Current limitations
 
-`doc/ARCHITECTURE.md` §19 lists every defect with file:line. Confirmed still broken as of this file's writing:
+The current per-app behavior and integration examples are in `doc/README.md`. Registration now includes `phone`, resend uses SMS, cart signals are registered, and the manager order detail view has its serializer/queryset and throttle scope configured. Remaining issues confirmed in the current code:
 
-- **Registration 500s**: `phone` is missing from `RegisterSerializer.Meta.fields` (`accounts/serializers.py:50`) but `create()` reads it (`:104`) → `create_user` raises `ValueError`.
-- **Carts are not auto-created**: `cart/apps.py:ready()` has a docstring but no `import cart.signals`, so `create_cart` never registers. `cart/api/views.py` then calls `Cart.objects.get()` unguarded.
-- **OTP keys don't match**: `RegisterView` caches under the raw submitted phone; `VerifySerializer` normalizes to `09…` first. The 5-attempt lockout also overwrites its own counter key with `True` (`accounts/views.py:94` vs `:97`), so it never triggers.
-- **`ManagerOrderPanelView`** has neither `queryset` nor `serializer_class`, and uses an undefined `manager` throttle scope.
-- **Phone format mismatch**: `PhoneNumberField` stores E.164 (`+989…`) but several queries look up `09…`.
+- Registration caches OTP under the raw phone string, while verify accepts the local `09...` form. The OTP attempt counter and block flag also share a key.
+- Login sets HttpOnly cookies, but the standard refresh view expects a JSON `refresh` value and does not update cookies.
+- Category deletion checks the related manager against `None`, so it always rejects deletion. Slug generation for an all-Persian category name can produce an empty slug.
+- The order serializer builds a relative payment URL. Pending orders are not automatically marked EXPIRED by a scheduled task; the existing cleanup task deletes only already-expired old orders.
+- Nested product variants are not filtered by `show`, and reservation/payment stock changes do not invalidate the cached product list.
 
-(§19's claim that `Profile` has no migration is now stale — `dashboard/migrations/0001_initial.py` exists.)
-
-`order/tests.py` is empty, and `accounts/tests.py` / `cart/tests.py` currently fail: they call `create_user()` without the now-required `phone`, test the old email-based OTP flow, and contain mis-indented test methods nested inside other tests (so those never run). Fix the indentation when you touch those files.
+`order/tests.py` has no executable tests. Some accounts, dashboard, and cart tests still use outdated contracts or omit the required phone when creating users; some test functions are incorrectly nested. Check these against the current API before relying on a full-suite pass.
 
 ## Secrets
 

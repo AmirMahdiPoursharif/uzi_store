@@ -52,6 +52,7 @@ class ProductSerializer(serializers.ModelSerializer):
     category_slug = serializers.SlugRelatedField(
         queryset=Category.objects.all(), slug_field="slug", write_only=True, source="category")
     
+    # UUID ورودی به شیء والد تبدیل می‌شود؛ null به معنی محصول پایه است.
     parent_uuid = serializers.SlugRelatedField(
         queryset=Product.objects.all(), slug_field="uuid", source="parent", allow_null=True)
     
@@ -68,6 +69,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_avg_rating(self, obj):
         """Calculates and returns the average user rating for the product."""
+        # اگر view میانگین را annotate کرده باشد، از همان مقدار بدون پرس‌وجوی تازه استفاده می‌شود.
         if hasattr(obj, "avg_rating"):
             return obj.avg_rating if obj.avg_rating is not None else 0
         return obj.reviews.aggregate(Avg("rating"))["rating__avg"] or 0
@@ -85,6 +87,7 @@ class ProductSerializer(serializers.ModelSerializer):
         validated_data = super().validate(data)
         parent = validated_data.get("parent")
         instance = self.instance
+        # در PATCH، فیلدهای ارسال‌نشده از نمونه فعلی خوانده می‌شوند تا اعتبارسنجی کامل بماند.
         name = validated_data.get("name", getattr(instance, "name", None))
         parent = validated_data.get("parent", getattr(instance, "parent", None))
         variant_name = validated_data.get("variant_name", getattr(instance, "variant_name", None))
@@ -133,6 +136,7 @@ class ProductSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
+        # پاسخ محصول پایه، گونه‌ها و نظرها را دارد و موجودی خودش را نمایش نمی‌دهد.
         if data.get("parent_uuid") is None:
             data.pop("variant_name", None)
             data.pop("parent_uuid", None)
@@ -140,6 +144,7 @@ class ProductSerializer(serializers.ModelSerializer):
             data.pop("available_stock", None)
             
 
+        # پاسخ گونه، اطلاعات خرید و والد را نگه می‌دارد و بخش‌های ویژه محصول پایه حذف می‌شوند.
         if data.get("parent_uuid") is not None:
             data.pop("variants", None)
             data.pop("recent_reviews", None)
@@ -154,6 +159,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     Serializes user reviews, enforcing strict content moderation 
     to prevent spam (phone/email) and profanity.
     """
+    # نویسنده و محصول در view تعیین می‌شوند و از ورودی کاربر قابل تغییر نیستند.
     user = serializers.ReadOnlyField(source="user.email")
     product = serializers.ReadOnlyField(source="product.uuid")
 
@@ -170,6 +176,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         if re.search(email_regex, value):
             raise serializers.ValidationError("Reviews cannot contain a email address")
         
+        # واژه‌های فهرست‌شده به صورت زیررشته و بدون حساسیت به حروف انگلیسی جست‌وجو می‌شوند.
         lower_value = value.lower()
         for word in banned_word:
             if word in lower_value:
@@ -180,6 +187,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class ReplySerializer(serializers.ModelSerializer):
     """Serializes review replies with the same content moderation rules as reviews."""
+    # نویسنده و نظر مقصد را view از کاربر جاری و مسیر درخواست مشخص می‌کند.
     user = serializers.ReadOnlyField(source="user.email")
     review = serializers.ReadOnlyField(source="review.id")
 

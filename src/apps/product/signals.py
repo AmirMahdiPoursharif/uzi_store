@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from django.core.cache import cache
 from product.models import Product, Review
 
+# تغییر محصول یا نظر، نسخه کلیدهای فهرست را عوض می‌کند؛ داده‌های قدیمی با TTL حذف می‌شوند.
 @receiver([post_save, post_delete], sender=Product)
 @receiver([post_save, post_delete], sender=Review)
 def invalidate_products_cache(sender, instance, **kwargs):

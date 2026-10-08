@@ -16,6 +16,7 @@ class DashboardProfileTests(TestCase):
             last_name='رضایی',
             is_active=True
         )
+        # درخواست‌های تست با همین کاربر اجرا می‌شوند و به دریافت JWT وابسته نیستند.
         self.client.force_authenticate(user=self.user)
         self.profile_url = '/api/auth/profile/'
         self.update_profile_url = '/api/auth/update-profile/'

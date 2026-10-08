@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DJANGO_SETTINGS_MODULE=config.settings
 
 WORKDIR /app
+# وابستگی‌ها پیش از کد کپی می‌شوند تا نصب مجدد فقط هنگام تغییر requirements لازم شود.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -20,4 +21,5 @@ WORKDIR /app/src
 USER app
 EXPOSE 8000
 
+# سرور توسعه تغییر فایل‌ها را تشخیص می‌دهد و برنامه وب را دوباره بارگذاری می‌کند.
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

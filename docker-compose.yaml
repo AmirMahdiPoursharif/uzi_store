@@ -1,5 +1,6 @@
 name: uzi-store
 
+# تنظیمات مشترک وب، migration و پردازش‌های Celery با این anchor به اشتراک گذاشته می‌شوند.
 x-app: &app
   build: .
   image: uzi-store:local
@@ -10,6 +11,7 @@ x-app: &app
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uzistore-local}
     POSTGRES_HOST: db
     POSTGRES_PORT: "5432"
+    # کش، صف کارها و نتیجه Celery در سه پایگاه منطقی جداگانه Redis قرار دارند.
     REDIS_LOCATION: redis://redis:6379/0
     CELERY_BROKER_URL: redis://redis:6379/1
     CELERY_RESULT_BACKEND: redis://redis:6379/2
@@ -47,6 +49,7 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # تکمیل migration و جمع‌آوری فایل‌های ایستا شرط شروع سرویس‌های برنامه است.
   migrate:
     <<: *app
     command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
@@ -74,6 +77,7 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
+  # beat کارها را طبق زمان‌بندی در صف می‌گذارد؛ اجرای آن‌ها با worker است.
   beat:
     <<: *app
     command: ["celery", "-A", "config", "beat", "--loglevel=info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler", "--pidfile="]

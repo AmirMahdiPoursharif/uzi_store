@@ -15,6 +15,7 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # پروفایل کاربران قدیمی در نخستین درخواست، در صورت نبودن ساخته می‌شود.
         profile, created = Profile.objects.get_or_create(user=request.user)
         serializer = ProfileSerializer(profile)
         return Response(serializer.data)
@@ -27,6 +28,7 @@ class UpdateProfileView(APIView):
             data = request.data
             print(f"📥 داده: {data}")
             user = request.user
+            # این مسیر مستقیماً فیلدهای موجود در درخواست را روی User اعمال می‌کند.
             if 'first_name' in data:
                 user.first_name = data['first_name']
             if 'last_name' in data:
@@ -34,6 +36,7 @@ class UpdateProfileView(APIView):
             if 'phone' in data:
                 user.phone = data['phone']
             user.save()
+            # نشانی در مدل Profile ذخیره می‌شود و از اطلاعات حساب جداست.
             if 'address' in data:
                 profile.address = data['address']
             if 'postal_code' in data:
@@ -70,6 +73,7 @@ class ChangePasswordView(APIView):
         user = request.user
         old_password = serializer.validated_data['old_password']
         new_password = serializer.validated_data['new_password']
+        # رمز فعلی با مقدار هش‌شده مقایسه می‌شود؛ رمز تازه نیز با set_password هش می‌شود.
         if not user.check_password(old_password):
             return Response({
                 'old_password': 'رمز عبور فعلی اشتباه است'
@@ -91,6 +95,7 @@ class DeleteAccountView(APIView):
             return Response({
                 'password': 'رمز عبور اشتباه است'
             }, status=status.HTTP_400_BAD_REQUEST)
+        # حذف کاربر، روابط دارای CASCADE را نیز حذف می‌کند و سپس کوکی‌ها پاک می‌شوند.
         user.delete()
         response = Response({
             'message': 'حساب کاربری با موفقیت حذف شد'
@@ -99,6 +104,7 @@ class DeleteAccountView(APIView):
         response.delete_cookie('refresh_token')
         return response
 class LogoutView(APIView):
+    # خروج مرورگر با حذف دو کوکی انجام می‌شود و خود حساب کاربری باقی می‌ماند.
     permission_classes = [IsAuthenticated]
     def post(self, request):
         response = Response({

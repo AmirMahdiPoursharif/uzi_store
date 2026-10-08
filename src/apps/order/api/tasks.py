@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def delete_expired_orders(days=30):
+    # این کار فقط سفارش‌های از قبل EXPIRED را پاک می‌کند و سفارش معلق را منقضی نمی‌کند.
     time_delta = timezone.now() - timedelta(days=days)
 
     orders_to_delete = Order.objects.filter(

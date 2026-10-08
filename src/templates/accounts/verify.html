@@ -25,6 +25,7 @@
     </div>
     <script>
         // گرفتن ایمیل از localStorage
+        // این قالب آزمایشی هنوز email می‌فرستد؛ API فعلی تأیید و ارسال مجدد، phone می‌خواهد.
         let userEmail = localStorage.getItem('verify_email');
         
         if (!userEmail) {
@@ -99,6 +100,7 @@
         }
         
         function showMessage(msg, type) {
+            // پیام نتیجه پس از سه ثانیه پنهان می‌شود تا برای تلاش بعدی فرم باقی بماند.
             const msgDiv = document.getElementById('message');
             msgDiv.className = `message ${type}`;
             msgDiv.innerText = msg;

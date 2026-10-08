@@ -7,6 +7,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 # Create your models here.
 
 class UserManager(BaseUserManager):
+    # ساخت کاربر از این مسیر، رمز را هش می‌کند و الزام ایمیل و تلفن را بررسی می‌کند.
     def create_user(self, email, phone, password=None, **extra_fields):
         if not email:
             raise ValueError("pleas enter your email")
@@ -19,6 +20,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, phone, password=None, **extra_fields):
+        # حساب مدیریتی به صورت پیش‌فرض فعال است و مجوز ورود به پنل مدیریت دارد.
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
@@ -36,6 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
+    # شناسه ورود ایمیل است؛ فرمان createsuperuser شماره تلفن را هم دریافت می‌کند.
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['phone']
 
@@ -44,6 +47,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def full_name(self):
+        # اگر هر دو بخش نام موجود نباشد، ایمیل برای نمایش کاربر استفاده می‌شود.
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
         return self.email

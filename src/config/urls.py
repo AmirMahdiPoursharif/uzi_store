@@ -19,6 +19,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
+# هر include پیشوند همان بخش را تعیین می‌کند؛ مسیرهای محصول مستقیماً در ریشه قرار دارند.
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include("product.api.urls")),
@@ -26,4 +27,5 @@ urlpatterns = [
     path('manager/', include("order.api.manager_urls")),
     path('api/auth/', include("accounts.urls")),
     path('cart/', include("cart.api.urls"))
+    # مسیر فایل‌های آپلودی به کمک static فقط هنگام فعال بودن DEBUG اضافه می‌شود.
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

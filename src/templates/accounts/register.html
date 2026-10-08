@@ -154,6 +154,7 @@
             }
             
             try {
+                // بررسی‌های فرم اولیه‌اند؛ اعتبارسنجی نهایی اطلاعات در API انجام می‌شود.
                 const response = await fetch('/api/auth/register/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -163,6 +164,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    // شماره در مرورگر باقی می‌ماند و سپس کاربر به صفحه واردکردن کد هدایت می‌شود.
                     localStorage.setItem('register_phone', phone);
                     showMessage(msgDiv, '✅ ' + data.message, 'success');
                     setTimeout(() => {

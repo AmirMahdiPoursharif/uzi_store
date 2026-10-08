@@ -1,37 +1,44 @@
 import logging
 
+from cart.models import Cart, CartItem
 from common.http import HttpError, post_json
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F, When, IntegerField, Case, Prefetch
+from django.db.models import Case, F, IntegerField, Prefetch, When
 from django.utils import timezone
+from order.models import (
+    InventoryReservation,
+    InventoryReservationStatus,
+    Order,
+    OrderItem,
+    OrderStatus,
+)
+from product.models import Product
 from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from cart.models import Cart, CartItem
-from order.models import OrderStatus, InventoryReservationStatus, Order, OrderItem, InventoryReservation
-from product.models import Product
 from .payment_verify import verify_payment
 from .permissions import IsManager
-from .serializers import OrderSerializer, OrderDetailSerializer, ManagerPanelSerializer
+from .serializers import ManagerPanelSerializer, OrderDetailSerializer, OrderSerializer
 
 logger = logging.getLogger(__name__)
 
 
 def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
     if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(",")[0]
     else:
-        ip = request.META.get('HHTTP_X_Real_IP')
+        ip = request.META.get("HHTTP_X_Real_IP")
     return ip
 
 
 class BaseView(APIView):
+    # viewهای کاربر، احراز هویت و محدودیت نرخ مشترک دارند؛ scope در هر view تعیین می‌شود.
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
 
@@ -44,6 +51,7 @@ class OrderList(BaseView, ListAPIView):
     throttle_scope = "order"
 
     def get_queryset(self):
+        # فهرست سفارش‌ها همیشه به کاربر درخواست محدود می‌شود.
         return Order.objects.filter(user=self.request.user)
 
 
@@ -53,6 +61,7 @@ class OrderDetail(BaseView, RetrieveAPIView):
     throttle_scope = "order"
 
     def get_queryset(self):
+        # دانستن شناسه سفارش کاربر دیگر، دسترسی به جزئیات آن ایجاد نمی‌کند.
         return Order.objects.filter(user=self.request.user)
 
 
@@ -60,31 +69,43 @@ class OrderCreate(BaseView, APIView):
     serializer_class = OrderDetailSerializer
     throttle_scope = "order_create"
 
+    # ساخت سفارش، اقلام، رزروها و تخلیه سبد در یک تراکنش انجام می‌شوند.
     @transaction.atomic
     def post(self, request):
+        # سفارش پرداخت‌نشده با مهلت باقی‌مانده، مانع ساخت سفارش تازه برای همان کاربر است.
         existing_order = Order.objects.filter(
             user=request.user,
             status=1,
             expires_at__gt=timezone.now(),
         ).exists()
         if existing_order:
-            return Response({"message": "Order already exists"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Order already exists"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             user_cart = Cart.objects.get(user=request.user)
         except Cart.DoesNotExist:
-            return Response({"message": "User has no cart"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "User has no cart"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         cart_items = user_cart.get_cart_items()
 
         if cart_items is None:
-            return Response({"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         product_ids = [item.product_id for item in cart_items]  # [1, 4, 7, 8]
+        # قفل محصولات تا پایان تراکنش حفظ می‌شود؛ ترتیب ثابت شناسه‌ها خطر بن‌بست را کم می‌کند.
         locked = {
-            product.id: product for product in Product.objects.select_for_update().filter(
+            product.id: product
+            for product in Product.objects.select_for_update()
+            .filter(
                 id__in=product_ids,
-            ).order_by("id")
+            )
+            .order_by("id")
         }
 
         # {
@@ -96,14 +117,16 @@ class OrderCreate(BaseView, APIView):
 
         for item in cart_items:
             product = locked[item.product_id]
+            # پس از گرفتن قفل، موجودی با احتساب رزروهای پرداخت‌نشده دوباره بررسی می‌شود.
             if item.quantity > product.available_stock():
-                return Response({"message": "not enough stock"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"message": "not enough stock"}, status=status.HTTP_400_BAD_REQUEST
+                )
 
-        user_order = Order.objects.create(
-            user=request.user
-        )
+        user_order = Order.objects.create(user=request.user)
 
         for item in cart_items:
+            # قیمت در قلم سفارش ثبت می‌شود؛ در این مرحله فقط رزرو موجودی ساخته می‌شود.
             OrderItem.objects.create(
                 order=user_order,
                 product=item.product,
@@ -115,13 +138,16 @@ class OrderCreate(BaseView, APIView):
                 product=item.product,
                 quantity=item.quantity,
             )
+        # بعد از ثبت همه اقلام، مهلت و مبلغ سفارش تعیین و سبد کاربر خالی می‌شود.
         user_order.set_expires_at()
         user_order.update_total_price()
         CartItem.objects.filter(cart=user_cart).delete()
 
         response = {
             "message": "Order created successfully",
-            "data": self.serializer_class(user_order, context={"request": request}).data,
+            "data": self.serializer_class(
+                user_order, context={"request": request}
+            ).data,
         }
 
         return Response(response, status=status.HTTP_201_CREATED)
@@ -135,20 +161,27 @@ class Payment(BaseView, APIView):
         order_id = kwargs.get("order_id")
 
         try:
+            # قفل سفارش از تغییر هم‌زمان آن در طول آماده‌سازی درخواست پرداخت جلوگیری می‌کند.
             order = Order.objects.select_for_update().get(
-                user=request.user,
-                order_id=order_id
+                user=request.user, order_id=order_id
             )
         except Order.DoesNotExist:
-            return Response({"message": "order does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "order does not exist"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         if order.status != OrderStatus.PENDING_PAYMENT or order.transaction_id:
-            return Response({"message": "Order can not be paid"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Order can not be paid"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         if order.is_expired():
             order.expire()
-            return Response({"message": "your order is expired"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "your order is expired"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
+        # مبلغ از سفارش ذخیره‌شده خوانده می‌شود و به مبلغ ارسالی کاربر وابسته نیست.
         amount = order.total_price
         data = {
             "order_id": f"{order_id}",
@@ -156,7 +189,7 @@ class Payment(BaseView, APIView):
             "name": f"{request.user.first_name} {request.user.last_name}",
             "mail": f"{request.user.email}",
             "desc": "test description",
-            "callback": settings.PAYMENT_URLS["payment_gateway_callback_url"]
+            "callback": settings.PAYMENT_URLS["payment_gateway_callback_url"],
         }
         payment_url = settings.PAYMENT_URLS["payment_gateway_url"]
 
@@ -171,19 +204,26 @@ class Payment(BaseView, APIView):
             logger.exception(
                 f"{timezone.now()} | error while sending request to payment gateway | order id {order_id} \n    because of this exception: \n   {e}",
             )
-            return Response({"message": "gateway connection error"}, status=status.HTTP_502_BAD_GATEWAY)
+            return Response(
+                {"message": "gateway connection error"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
+        # این مرحله فقط لینک درگاه را دریافت می‌کند؛ تأیید نهایی در Callback انجام می‌شود.
         link = (response or {}).get("link")
         if not link:
             logger.error(
                 f"{timezone.now()} | there is no link in gateway response | order id: {order_id} \n    response: \n    {response}",
             )
-            return Response({"message": "gateway error"}, status=status.HTTP_502_BAD_GATEWAY)
+            return Response(
+                {"message": "gateway error"}, status=status.HTTP_502_BAD_GATEWAY
+            )
 
         return Response({"payment_page": f"{link}"}, status=status.HTTP_200_OK)
 
 
 class Callback(APIView):
+    # بازگشت از درگاه به نشست کاربر وابسته نیست؛ پرداخت باید سمت سرور استعلام شود.
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "callback"
@@ -201,29 +241,41 @@ class Callback(APIView):
         try:
             status_code = int(params["status"])
         except:
-            return Response({"message": "status code is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "status code is incorrect"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if status_code == 10:
             order_id = params["order_id"]
             payment_id = params["id"]
             # get the correct order
             try:
-                order = Order.objects.select_for_update().get(
-                    order_id=order_id
-                )
+                order = Order.objects.select_for_update().get(order_id=order_id)
             except Order.DoesNotExist:
                 logger.error(
                     f"{timezone.now()} | order for received callback does not exists | user ip: {ip} | order id: {order_id}"
                 )
-                return Response({"message": "order does not exist"}, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {"message": "order does not exist"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
+            # با قفل سفارش و بررسی شناسه تراکنش، callback تکراری دوباره پردازش نمی‌شود.
             if order.status == OrderStatus.PAID or order.transaction_id:
-                return Response({"error": "the order is already paid"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "the order is already paid"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
+            # پارامترهای URL به تنهایی ملاک موفقیت نیستند؛ پاسخ استعلام درگاه بررسی می‌شود.
             response = verify_payment(payment_id, order_id)
 
             if response is None:
-                return Response({"message": "gateway connection error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(
+                    {"message": "gateway connection error"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             try:
                 if response["status"] == "100":
@@ -233,7 +285,10 @@ class Callback(APIView):
                     order.expires_at = None
                     if not order_items:
                         logger.error(f"there are no order items for order {order_id}")
-                        return Response({"message":"no items found for"}, status=status.HTTP_404_NOT_FOUND)
+                        return Response(
+                            {"message": "no items found for"},
+                            status=status.HTTP_404_NOT_FOUND,
+                        )
 
                     order.save(
                         update_fields=[
@@ -245,15 +300,20 @@ class Callback(APIView):
 
                     order_product_ids = [item.product_id for item in order_items]
 
+                    # عبارت‌های F و Case کاهش تعداد هر محصول را در خود پایگاه داده انجام می‌دهند.
                     cases = [
-                        When(id=order_item.product_id, then=F("stock") - order_item.quantity)
+                        When(
+                            id=order_item.product_id,
+                            then=F("stock") - order_item.quantity,
+                        )
                         for order_item in order_items
                     ]
 
-                    Product.objects.select_for_update().filter(id__in=order_product_ids).update(
-                        stock=Case(*cases, output_field=IntegerField())
-                    )
+                    Product.objects.select_for_update().filter(
+                        id__in=order_product_ids
+                    ).update(stock=Case(*cases, output_field=IntegerField()))
 
+                    # پس از کاهش موجودی واقعی، رزرو آزاد می‌شود تا تعداد دوباره کسر نشود.
                     order.reservations.update(
                         status=InventoryReservationStatus.RELEASED
                     )
@@ -261,17 +321,26 @@ class Callback(APIView):
                     logger.warning(
                         f"{timezone.now()} | payment verification failed (user fault) | user ip: {ip}\n    {response}"
                     )
-                    return Response({"message": "payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(
+                        {"message": "payment verification failed"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
             except Exception as e:
                 logger.exception(
                     f"{timezone.now()} | payment verify failed | order id: {order_id}\n    error:\n   {e}\n {response['status']}"
                 )
-                return Response({"message": "internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(
+                    {"message": "internal server error"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             return Response(response, status=status.HTTP_200_OK)
 
         else:
-            return Response({"message": "payment is not completed"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "payment is not completed"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 # admin panel views
@@ -279,7 +348,9 @@ class Callback(APIView):
 
 # admin dashboard
 
+
 class ManagerPanelView(ListAPIView):
+    # مدیر مجاز است سفارش‌های همه کاربران را در این فهرست ببیند.
     permission_classes = [IsManager]
     queryset = Order.objects.all()
     serializer_class = ManagerPanelSerializer
@@ -301,5 +372,6 @@ class ManagerOrderPanelView(RetrieveAPIView):
             queryset=OrderItem.objects.select_related("product__category"),
         )
     )
+
 
 # Created with ❤️ by (dizi) amirmahdi for uzi

@@ -60,6 +60,7 @@ class Product(models.Model):
         Validates product hierarchy to prevent self-parenting, 
         multi-level nesting, and duplicate variant creations.
         """
+        # ساختار مجاز یک محصول پایه و گونه‌های مستقیم آن است؛ سطح سوم پذیرفته نمی‌شود.
         if self.parent:
             if self.pk and self.parent.pk == self.pk:
                 raise ValidationError(
@@ -76,6 +77,7 @@ class Product(models.Model):
                     {"parent": "A product that already has variants cannot become a variant of another product"}
                 )
             
+        # کنترل تکراری بودن، رکورد جاری را هنگام ویرایش از جست‌وجو کنار می‌گذارد.
         qs = Product.objects.filter(
             name=self.name, parent=self.parent, variant_name=self.variant_name)
              
@@ -115,6 +117,8 @@ class Product(models.Model):
         Calculates the actual available stock by subtracting quantities 
         held in active, unpaid inventory reservations from the total stock.
         """
+        # ملاک این محاسبه، وضعیت و مهلت سفارش است؛ فیلد status خود رزرو فیلتر نمی‌شود.
+        # رزرو سفارش منقضی‌شده حتی پیش از اجرای پاک‌سازی از جمع کنار می‌رود.
         active_reservations = (
                 InventoryReservation.objects.filter(
                     product=self,
@@ -134,6 +138,7 @@ class ProductImage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
+        # سقف ده تصویر فقط هنگام ایجاد رکورد تصویر جدید بررسی می‌شود.
         if self.pk is None:
             existing_images_count = ProductImage.objects.filter(product=self.product).count()
             if existing_images_count >= 10:

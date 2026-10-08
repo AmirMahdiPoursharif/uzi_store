@@ -12,103 +12,102 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import sys
 from pathlib import Path
-from celery.schedules import crontab
 
 import environ
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
 APPS_DIR = BASE_DIR / "apps"
 
+# برنامه‌ها با نام‌هایی مثل product وارد می‌شوند؛ پوشه apps به مسیر جست‌وجوی Python افزوده می‌شود.
 sys.path.insert(0, str(APPS_DIR))
 
 env = environ.Env()
-environ.Env().read_env(PROJECT_DIR / '.env')
+# فایل محیطی در ریشه مخزن قرار دارد؛ BASE_DIR به پوشه src اشاره می‌کند.
+environ.Env().read_env(PROJECT_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DEBUG', default=False)
+DEBUG = env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '[::1]'])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "[::1]"])
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'corsheaders',
-
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "corsheaders",
     # additional
-    'rest_framework',
-    'phonenumber_field',
-    'django_celery_beat',
-
+    "rest_framework",
+    "phonenumber_field",
+    "django_celery_beat",
     # apps
-    'accounts',
-    'dashboard',
-    'order',
-
+    "accounts",
+    "dashboard",
+    "order",
     # for making sure that the signals get called
-    'product.apps.ProductsAppConfig',
-    'cart.apps.CartAppConfig'
+    "product.apps.ProductsAppConfig",
+    "cart.apps.CartAppConfig",
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # CORS پیش از WhiteNoise قرار می‌گیرد تا پاسخ فایل‌های ایستا هم هدرهای آن را دریافت کند.
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'config.urls'
+ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            BASE_DIR / "templates"
-        ],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = "config.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('POSTGRES_DB', default='uzistore'),
-        'USER': env('POSTGRES_USER', default='uzistore'),
-        'PASSWORD': env('POSTGRES_PASSWORD', default='uzistore-local'),
-        'HOST': env('POSTGRES_HOST', default='127.0.0.1'),
-        'PORT': env.int('POSTGRES_PORT', default=5432),
-        'CONN_MAX_AGE': 60,
-        'CONN_HEALTH_CHECKS': True,
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("POSTGRES_DB", default="uzistore"),
+        "USER": env("POSTGRES_USER", default="uzistore"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default="uzistore-local"),
+        "HOST": env("POSTGRES_HOST", default="127.0.0.1"),
+        "PORT": env.int("POSTGRES_PORT", default=5432),
+        # اتصال‌ها تا شصت ثانیه قابل استفاده مجددند و سلامت آن‌ها پیش از استفاده بررسی می‌شود.
+        "CONN_MAX_AGE": 60,
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
@@ -117,52 +116,53 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
 # cache setting
 
 CACHES = {
-    'redis': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': env('REDIS_LOCATION'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'SOCKET_CONNECT_TIMEOUT': 2,
-            'SOCKET_TIMEOUT': 2
-        }
+    "redis": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": env("REDIS_LOCATION"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 2,
+            "SOCKET_TIMEOUT": 2,
+        },
     },
     # Degraded-mode fallback for when Redis is unreachable. Django's built-in
     # local-memory backend keeps this dependency-free; note it is per-process,
     # so entries are not shared between workers.
-    'local': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'fallback',
-        'TIMEOUT': 300,
+    "local": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "fallback",
+        "TIMEOUT": 300,
     },
-    'default': {
-        'BACKEND': 'product.custom_cache.FallbackCache',
-        'PRIMARY': 'redis',
-        'FALLBACK': 'local',
-    }
+    "default": {
+        # دسترسی معمول برنامه به cache از این backend عبور می‌کند و fallback محلی دارد.
+        "BACKEND": "product.custom_cache.FallbackCache",
+        "PRIMARY": "redis",
+        "FALLBACK": "local",
+    },
 }
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'Asia/Tehran'
+TIME_ZONE = "Asia/Tehran"
 
 USE_I18N = True
 
@@ -171,44 +171,45 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = PROJECT_DIR / 'staticfiles'
+STATIC_URL = "static/"
+STATIC_ROOT = PROJECT_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # custom user setting
 
 # Keep the existing app label so migrations and imported data retain their IDs.
-AUTH_USER_MODEL = 'accounts_app.User'
+AUTH_USER_MODEL = "accounts_app.User"
 
 # DRF setting
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'accounts.authentication.CookieJWTAuthentication', 
-        'rest_framework_simplejwt.authentication.JWTAuthentication', 
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "accounts.authentication.CookieJWTAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     # 'DEFAULT_THROTTLE_CLASSES': [
     #     'rest_framework.throttling.AnonRateThrottle',
     #     'rest_framework.throttling.UserRateThrottle'
     # ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day',
-        'order': '60/min',
-        'order_create': '5/min',
-        'payment': '5/min',
-        'callback': '20/min',
-        'manager': '60/min',
-        'product_category_read': '60/min',
-        'review_reply_create_read': '30/min',
-    }
+    # تعریف نرخ به تنهایی محدودیت ایجاد نمی‌کند؛ view باید throttle مربوط را فعال کند.
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/day",
+        "user": "1000/day",
+        "order": "60/min",
+        "order_create": "5/min",
+        "payment": "5/min",
+        "callback": "20/min",
+        "manager": "60/min",
+        "product_category_read": "60/min",
+        "review_reply_create_read": "30/min",
+    },
 }
 
-#logging
+# logging
 
 LOGGING = {
     "version": 1,
@@ -226,47 +227,47 @@ LOGGING = {
 
 # media setting
 
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / "media"
 
-MEDIA_URL = '/media/'
+MEDIA_URL = "/media/"
 
-#payment setting
+# payment setting
 
+# یک آدرس برای دریافت لینک، یکی برای استعلام و دیگری برای بازگشت مرورگر از درگاه است.
 PAYMENT_URLS = {
-    "payment_gateway_callback_url" : "http://127.0.0.1:8000/order/payment/callback/",
-    "payment_gateway_verify_url" : "https://apis.uzicoders.ir/sandbox/gateway/payment/verify",
-    "payment_gateway_url" : "https://apis.uzicoders.ir/sandbox/gateway/payment"
+    "payment_gateway_callback_url": "http://127.0.0.1:8000/order/payment/callback/",
+    "payment_gateway_verify_url": "https://apis.uzicoders.ir/sandbox/gateway/payment/verify",
+    "payment_gateway_url": "https://apis.uzicoders.ir/sandbox/gateway/payment",
 }
 
-PAYMENT_GATEWAY_API_KEY = env('PAYMENT_GATEWAY_API_KEY')
+PAYMENT_GATEWAY_API_KEY = env("PAYMENT_GATEWAY_API_KEY")
 
 PAYMENT_HEADERS = {
     "X-API-Key": PAYMENT_GATEWAY_API_KEY,
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
 # celery and cronjob settings
 
-CELERY_BROKER_URL = env('CELERY_BROKER_URL', default=env('REDIS_LOCATION'))
-CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default=env('REDIS_LOCATION'))
-CELERY_IMPORTS = ('order.api.tasks',)
-CELERY_TIMEZONE = 'Asia/Tehran'
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=env("REDIS_LOCATION"))
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=env("REDIS_LOCATION"))
+# وظیفه سفارش داخل api/tasks.py است و با این تنظیم صریحاً به worker معرفی می‌شود.
+CELERY_IMPORTS = ("order.api.tasks",)
+CELERY_TIMEZONE = "Asia/Tehran"
 CELERY_ENABLE_UTC = True
 
+# زمان‌بند، پاک‌سازی سفارش‌های منقضی قدیمی را ساعت چهار و شانزده به وقت تهران اجرا می‌کند.
 CELERY_BEAT_SCHEDULE = {
     "delete-expired-orders": {
         "task": "order.api.tasks.delete_expired_orders",
-        "schedule": crontab(hour='4,16', minute=0),
+        "schedule": crontab(hour="4,16", minute=0),
     }
 }
-SMS_API_KEY = env('SMS_API_KEY', default='')
-SMS_API_URL = env('SMS_API_URL', default='')
-SMS_SENDER = env('SMS_SENDER', default='')
+SMS_API_KEY = env("SMS_API_KEY", default="")
+SMS_API_URL = env("SMS_API_URL", default="")
+SMS_SENDER = env("SMS_SENDER", default="")
 
-SMS_HEADERS = {
-    "X-API-Key": SMS_API_KEY,
-    "Content-Type": "application/json"
-}
+SMS_HEADERS = {"X-API-Key": SMS_API_KEY, "Content-Type": "application/json"}

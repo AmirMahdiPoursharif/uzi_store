@@ -3,6 +3,7 @@ from django.conf import settings
 
 # Create your models here.
 class Profile(models.Model):
+    # اطلاعات نشانی در پروفایل جداست و هر کاربر حداکثر یک پروفایل دارد.
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

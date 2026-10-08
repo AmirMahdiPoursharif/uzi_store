@@ -312,6 +312,7 @@
     </div>
 
     <script>
+        // آخرین پاسخ پروفایل برای پرکردن فرم ویرایش در حافظه همین صفحه نگه داشته می‌شود.
         let currentUser = {};
 
         // ========== بارگذاری پروفایل ==========
@@ -322,6 +323,7 @@
             try {
                 console.log('📡 در حال دریافت اطلاعات پروفایل...');
                 
+                // کوکی احراز هویت همراه درخواست فرستاده می‌شود؛ JavaScript توکن را نمی‌خواند.
                 const response = await fetch('/api/auth/profile/', {
                     method: 'GET',
                     headers: {
@@ -365,6 +367,7 @@
         }
 
         // ========== تغییر رمز عبور ==========
+        // API رمز قبلی و تطبیق دو ورودی رمز جدید را پیش از ذخیره بررسی می‌کند.
         async function changePassword() {
             const oldPassword = document.getElementById('old-password').value;
             const newPassword = document.getElementById('new-password').value;
@@ -421,6 +424,7 @@
             document.getElementById('edit-modal').style.display = 'none';
         }
 
+// پس از ذخیره، پروفایل دوباره از سرور خوانده می‌شود تا نمایش با داده ذخیره‌شده هماهنگ شود.
 async function updateProfile() {
     const data = {
         first_name: document.getElementById('edit-firstname').value,

@@ -6,6 +6,7 @@ from order.models import OrderStatus
 
 
 class OrderProductSerializer(serializers.ModelSerializer):
+    # هر قلم سفارش فقط نام محصول و دسته را از اطلاعات فعلی محصول نمایش می‌دهد.
     category = serializers.CharField(source="category.name", read_only=True)
 
     class Meta:
@@ -14,6 +15,7 @@ class OrderProductSerializer(serializers.ModelSerializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    # قیمت و تعداد از خود قلم سفارش خوانده می‌شوند و با تغییر محصول بازنویسی نمی‌شوند.
     product = OrderProductSerializer(read_only=True)
 
     class Meta:
@@ -29,16 +31,19 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ("order_id", "user", "created_at", "transaction_id", "status", "total_price")
 
     def get_payment_url(self, obj):
+        # ساخت لینک برای سفارش معلق به request موجود در context نیاز دارد.
         if obj.status == OrderStatus.PENDING_PAYMENT:
             request = self.context.get("request")
             return request.build_absolute_uri(f"order/payment/{obj.order_id}")
         return None
 
 class OrderDetailSerializer(OrderSerializer):
+    # جزئیات، همان فیلدهای خلاصه سفارش را به همراه اقلام تو در تو برمی‌گرداند.
     order_items = OrderItemSerializer(many=True, read_only=True)
 
 
 class ManagerPanelSerializer(serializers.ModelSerializer):
+    # اطلاعات تماس از کاربر مرتبط خوانده می‌شود تا در فهرست مدیریتی همراه سفارش باشد.
     phone = serializers.CharField(source="user.phone", read_only=True)
     email = serializers.CharField(source="user.email", read_only=True)
 

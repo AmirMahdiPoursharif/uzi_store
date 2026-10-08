@@ -10,6 +10,7 @@ class HttpError(Exception):
     """
 
     def __init__(self, message, status=None, body=None):
+        # وضعیت و بدنه خطای سرویس برای گزارش‌گیری در اختیار فراخواننده باقی می‌مانند.
         super().__init__(message)
         self.status = status
         self.body = body
@@ -24,6 +25,7 @@ def post_json(url, data, headers=None, timeout=10, parse_response=True):
     treated as a failure. Raises HttpError on any failure, so callers never
     have to inspect a status code themselves.
     """
+    # داده به JSON تبدیل می‌شود؛ هدرهای فراخواننده می‌توانند مقدار پیش‌فرض را جایگزین کنند.
     request = urllib.request.Request(
         url,
         data=json.dumps(data).encode(),
@@ -43,6 +45,7 @@ def post_json(url, data, headers=None, timeout=10, parse_response=True):
     except (urllib.error.URLError, TimeoutError) as e:
         raise HttpError(f"could not reach {url}: {e}") from e
 
+    # سرویس‌هایی مانند پیامک ممکن است بدنه قابل استفاده‌ای برای پردازش نداشته باشند.
     if not parse_response or not payload:
         return None
 

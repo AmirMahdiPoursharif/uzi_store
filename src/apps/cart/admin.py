@@ -11,6 +11,7 @@ class CartAdmin(admin.ModelAdmin):
     list_display = ("user",)
 
 
+# اقلام سبد جدا از خود سبد ثبت شده‌اند تا محصول و تعداد هر ردیف دیده شود.
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
     """Registers the CartItem model in the Django admin interface."""

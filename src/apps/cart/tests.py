@@ -29,6 +29,7 @@ class CartIntegrationTests(APITestCase):
         self.product2 = Product.objects.create(
             name="Galaxy S26", price=800, stock=10, show=True, category=self.category)
         
+        # گونه قابل خرید جدا از محصول پایه ساخته می‌شود تا محدودیت API سبد آزموده شود.
         self.variant_product = Product.objects.create(
             name="iphone 17", variant_name="Black - 256GB", parent=self.product1,
             price=1000, stock=5, show=True, category=self.category)
@@ -43,6 +44,7 @@ class CartIntegrationTests(APITestCase):
 
     def test_cart_get_total_cost_calculation(self):
         """Ensure the cart accurately calculates the total cost of all its items."""
+        # این سناریو مستقیماً مدل را می‌آزماید و از اعتبارسنجی view افزودن به سبد عبور نمی‌کند.
         CartItem.objects.create(cart=self.cart, product=self.product1, quantity=1)
         CartItem.objects.create(cart=self.cart, product=self.product2, quantity=2)
 

@@ -26,6 +26,7 @@
     </div>
     <script>
         async function login() {
+            // درخواست ورود به همین مبدأ فرستاده می‌شود و مرورگر کوکی‌های پاسخ را نگه می‌دارد.
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const msgDiv = document.getElementById('message');
@@ -43,6 +44,7 @@
                     msgDiv.className = 'message success';
                     msgDiv.innerText = '✅ ورود موفق';
                     msgDiv.style.display = 'block';
+                    // این مقدار فقط ایمیل نمایشی است؛ توکن ورود در کوکی HttpOnly قرار دارد.
                     localStorage.setItem('user_email', email);
                     setTimeout(() => { 
                         window.location.href = '/api/auth/profile-page/'; 

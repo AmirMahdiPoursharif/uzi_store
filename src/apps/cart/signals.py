@@ -11,5 +11,6 @@ def create_cart(sender, instance, created, **kwargs):
     Listens for the creation of a new User model.
     Automatically provisions an empty Cart tied to the user immediately after registration.
     """
+    # ویرایش‌های بعدی کاربر نباید سبد تازه بسازند؛ فقط ایجاد اولیه این شرط را دارد.
     if created:
         Cart.objects.create(user=instance)

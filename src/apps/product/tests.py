@@ -131,6 +131,7 @@ class FallbackCacheTests(TestCase):
         mock_fallback = MagicMock()
 
         # Simulate primary cache failure and fallback cache success
+        # ایجاد خطای مصنوعی، مسیر fallback را بدون قطع‌کردن سرویس واقعی آزمایش می‌کند.
         mock_primary.get.side_effect = Exception("Redis connection refused")
         mock_fallback.get.return_value = "fallback_value"
 
@@ -415,6 +416,7 @@ class ProductVariantIntegrationTests(APITestCase):
         self.user = User.objects.create_user(
             email="user@uzi.com", password="123", is_active=True, phone="09141111111")
         self.category = Category.objects.create(name="phone", slug="phone")
+        # موجودی و قیمت گونه‌ها مستقل از محصول پایه‌اند و پاسخ API باید آن‌ها را تو در تو برگرداند.
         self.parent_product = Product.objects.create(
             category= self.category, name="iphone13", price=0, stock=0, show=True, parent=None)
         
@@ -498,6 +500,7 @@ class ProductValidationIntgreationTests(TestCase):
     def test_product_cannot_be_its_own_parent(self):
         """Ensure a product throws a ValidationError if it tries to parent itself."""
         self.base_product.parent = self.base_product
+        # فراخوانی save باید اعتبارسنجی مدل را حتی خارج از API فعال کند.
         with self.assertRaisesMessage(ValidationError, "A product cannot be its own parent"):
             self.base_product.save()
 

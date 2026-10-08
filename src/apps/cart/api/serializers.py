@@ -30,6 +30,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 class CartSerializer(serializers.ModelSerializer):
     """Serializes the entire cart, including nested items and the overall total cost."""
+    # اطلاعات صاحب سبد و اقلام تو در تو برای نمایش هستند؛ مالک از درخواست تعیین می‌شود.
     user = serializers.ReadOnlyField(source="user.email")
     items = CartItemSerializer(many=True, read_only=True)
     total_cost = serializers.SerializerMethodField()

@@ -6,11 +6,13 @@ from dashboard.views import ProfileView, UpdateProfileView, ChangePasswordView, 
 from .views import RegisterView, VerifyView, ResendotpView, CustomTokenObtainPairView, verify_page, register_page, \
     login_page
 
+# این مسیرها زیر پیشوند api/auth/ نصب می‌شوند و API پروفایل را هم در بر می‌گیرند.
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("verify/", VerifyView.as_view(), name="verify"),
     path("api/auth/resend-otp/", ResendotpView.as_view(), name="resend-otp"),
     path("login/", CustomTokenObtainPairView.as_view(), name="login"),
+    # view استاندارد refresh، توکن تازه‌سازی را از بدنه درخواست می‌خواند.
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
     path('verify-page/', verify_page, name='verify-page'),

@@ -6,6 +6,7 @@ SQLITE_PATH = Path(env('SQLITE_PATH', default=str(BASE_DIR / 'database' / 'db.sq
 if not SQLITE_PATH.is_file():
     raise FileNotFoundError(f'SQLite export source does not exist: {SQLITE_PATH}')
 
+# mode=ro منبع SQLite را فقط‌خواندنی باز می‌کند تا خروجی‌گرفتن داده‌ها آن را تغییر ندهد.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',

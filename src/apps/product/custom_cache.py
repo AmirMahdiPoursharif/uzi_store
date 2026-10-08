@@ -19,6 +19,7 @@ class FallbackCache(BaseCache):
 
     @property
     def primary(self):
+        # backend از رجیستری Django و بر اساس نام alias در تنظیمات دریافت می‌شود.
         return caches[self.primary_cache_name]
 
     @property
@@ -27,6 +28,7 @@ class FallbackCache(BaseCache):
 
     def get(self, key, default=None, version=None):
         """Attempts to read from the primary cache, falling back on failure."""
+        # رجوع به کش محلی فقط هنگام خطاست؛ نبود کلید در کش اصلی باعث fallback نمی‌شود.
         try:
             result = self.primary.get(key, default, version=version)
             return result
@@ -47,6 +49,7 @@ class FallbackCache(BaseCache):
 
     def set(self, key, value, timeout=None, version=None):
         """Performs a dual-write to both primary and fallback caches."""
+        # دو تلاش مستقل‌اند تا قطع بودن Redis مانع نوشتن نسخه محلی نشود.
         try:
             self.primary.set(key, value, timeout=timeout, version=version)
         except Exception as e:

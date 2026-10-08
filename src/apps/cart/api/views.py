@@ -72,6 +72,7 @@ class CartAddItemView(APIView):
         cart_item = CartItem.objects.filter(cart=cart, product=product).first()
         
         if cart_item:
+            # برای کالای موجود در سبد، مجموع تعداد قبلی و درخواست جدید با موجودی سنجیده می‌شود.
             new_total_quantity = cart_item.quantity + quantity
             if product.available_stock() < new_total_quantity:
                 return Response(
@@ -86,6 +87,7 @@ class CartAddItemView(APIView):
             # Create a brand new item in the cart
             cart_item = CartItem.objects.create(cart=cart, product=product, quantity=quantity)
 
+        # تغییر سبد هنوز موجودی را رزرو نمی‌کند؛ رزرو در مرحله ساخت سفارش انجام می‌شود.
         serializer = CartItemSerializer(cart_item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -108,6 +110,7 @@ class CartRemoveItemView(APIView):
 
         # Ensure the item is actually present in the user's cart before deletion
         try:
+            # محدود کردن جست‌وجو به سبد کاربر، اقلام سایر کاربران را خارج از دسترس نگه می‌دارد.
             cart_item = CartItem.objects.get(cart=cart, product=product)
         except CartItem.DoesNotExist:
             return Response({"error": "Item not in cart"}, status=status.HTTP_404_NOT_FOUND)

@@ -35,6 +35,7 @@ class UserProductListView(APIView):
         page_size = request.query_params.get("size", "20")
 
         # 2. Check cache to serve response faster
+        # نسخه، دسته و صفحه بخشی از کلیدند تا نتیجه درخواست‌های متفاوت با هم مخلوط نشود.
         current_cache_version = cache.get("products_cache_version", 1)
         cache_key = f"v{current_cache_version}_user_products(category:{category_slug},page:{page_number},page_size:{page_size})"
         products_cached_data = cache.get(cache_key)
@@ -43,6 +44,7 @@ class UserProductListView(APIView):
             return Response(products_cached_data, status=status.HTTP_200_OK)
 
         # 3. Fetch from DB if cache misses (Only 'show=True' products)
+        # فهرست عمومی از والدها ساخته می‌شود؛ گونه‌های آن‌ها در serializer نمایش داده می‌شوند.
         products = Product.objects.filter(show=True, parent__isnull=True).annotate(
             review_count=Count("reviews"),
             avg_rating=Avg("reviews__rating")
@@ -93,6 +95,7 @@ class UserCategoryListView(APIView):
     throttle_scope = "product_category_read"
 
     def get(self, request):
+        # کش دسته‌ها کلید مستقلی دارد و از شمارنده نسخه محصولات استفاده نمی‌کند.
         cache_key = "categories_list"
         categories = cache.get(cache_key)
 
@@ -200,6 +203,7 @@ class AdminProductDetailView(APIView):
     
     def delete(self, request, uuid):
         product = get_object_or_404(Product, uuid=uuid)
+        # حذف مدیریتی محصول، نمایش آن را غیرفعال می‌کند و رکورد در پایگاه داده می‌ماند.
         product.show = False
         product.save()
         return Response(
@@ -280,6 +284,7 @@ class ProductReviewListView(APIView):
     def post(self, request, uuid):
         product = get_object_or_404(Product, uuid=uuid)
 
+        # نظر ثبت‌شده برای یک گونه، به محصول پایه منتقل می‌شود.
         if product.parent:
             product = product.parent
 
@@ -288,6 +293,7 @@ class ProductReviewListView(APIView):
 
         # If review exists, perform a partial update instead of creation
         if has_reviewed:
+            # رفتار فعلی برای نظر تکراری، پاسخ خطاست؛ ویرایش مسیر جداگانه دارد.
             return Response(
                 {"error": "You have already reviewed this product"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -313,6 +319,7 @@ class ReviewDetailView(APIView):
 
     def get(self, request, review_id):
         review = get_object_or_404(Review, pk=review_id)
+        # در APIView، واکشی دستی شیء باید با بررسی صریح مجوز همان شیء همراه باشد.
         self.check_object_permissions(request, review)
         serializer = ReviewSerializer(review)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -350,6 +357,7 @@ class ReviewReplyListView(APIView):
     def post(self, request, review_id):
         review = get_object_or_404(Review, pk=review_id)
 
+        # هر کاربر از این مسیر فقط یک پاسخ برای هر نظر می‌تواند ایجاد کند.
         has_replied = Reply.objects.filter(review=review, user=request.user).exists()
 
         if has_replied:

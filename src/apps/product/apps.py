@@ -8,6 +8,7 @@ class ProductsAppConfig(AppConfig):
     """
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'product'
+    # نام ماژول product است؛ برچسب قدیمی برای سازگاری با روابط و migrationها حفظ شده است.
     label = 'products_app'
 
     def ready(self):
@@ -15,4 +16,7 @@ class ProductsAppConfig(AppConfig):
         Override the ready method to import and register signal handlers
         ensuring they are connected when the Django application starts.
         """
-        import product.signals
+        # Imported for its @receiver side effect, so it reads as unused (F401).
+        # Without the noqa, `ruff check --fix` deletes this line and the product
+        # cache-version signals stop firing.
+        import product.signals  # noqa: F401

@@ -34,6 +34,7 @@ class UserAdmin(BaseUserAdmin):
         ),
         (_("Important dates"), {"fields": ("last_login", "acc_created_at")}),
     )
+    # فرم ایجاد کاربر باید فیلدهای مدل سفارشی و دو ورودی رمز عبور را داشته باشد.
     add_fieldsets = (
         (
             None,

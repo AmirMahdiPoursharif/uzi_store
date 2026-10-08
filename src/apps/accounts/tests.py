@@ -15,6 +15,7 @@ User = get_user_model()
 class AccountsTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        # پاک‌سازی کش، کدهای تأیید و شمارنده‌های باقی‌مانده از تست قبلی را حذف می‌کند.
         cache.clear()
         self.register_url = '/api/auth/register/'
         self.verify_url = '/api/auth/verify/'
@@ -108,6 +109,7 @@ class AccountsTests(TestCase):
 
     def test_change_password_success(self):
         user = User.objects.create_user(email=self.test_email, password=self.test_password, is_active=True)
+        # احراز هویت مستقیم، سناریوی تغییر رمز را از جریان ورود مستقل می‌کند.
         self.client.force_authenticate(user=user)
         new_pass = 'NewPass456!'
         response = self.client.post(self.change_password_url, {
